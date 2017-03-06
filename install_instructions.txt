@@ -1,0 +1,6 @@
+pip install tqdm
+Go to Keras and intall it separately
+Go to Recurrentshop and install it separately
+Go to Seq2seq and install it
+
+(make sure file structure includes data and download as described in github)
