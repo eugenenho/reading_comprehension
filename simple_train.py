@@ -64,6 +64,7 @@ def build_data():
 
         X_train[i] = np.array(curr_input_list[:simple_configs.INPUT_MAX_LENGTH])
 
+    print 'Made X data'
     # Y DATA....
     answers_list = cPickle.load(open("./data/marco/train.ids.answer.pkl","rb" ))
 
