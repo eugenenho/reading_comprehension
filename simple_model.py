@@ -9,7 +9,6 @@ import numpy as np
 
 import simple_configs
 
-# (need to add masking)
 def build_model():
 	model = Sequential()
 
@@ -43,8 +42,9 @@ def build_model():
 			simple_configs.MAX_NB_WORDS,
 		    simple_configs.EMBEDDING_DIM,
 		    weights=[embedding_matrix],
-		    input_length=simple_configs.INPUT_MAX_LENGTH
-	    )
+		    input_length=simple_configs.INPUT_MAX_LENGTH,
+		    mask_zero=True
+    )
 	s2s_layer = Seq2Seq(
 		batch_input_shape=(None, simple_configs.INPUT_MAX_LENGTH, simple_configs.EMBEDDING_DIM),
 		hidden_dim=simple_configs.HIDDEN_DIM, 
@@ -56,7 +56,7 @@ def build_model():
 	# ADD UP ACTUAL MODEL
 	model.add(embedding_layer)
 	model.add(s2s_layer)
-	model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+	model.compile(loss='categorical_crossentropy', optimizer='adam')
 
 	print 'Model Built'
 	return model
