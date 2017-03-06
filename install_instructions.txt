@@ -2,5 +2,6 @@ pip install tqdm
 Go to Keras and intall it separately
 Go to Recurrentshop and install it separately
 Go to Seq2seq and install it
+pip install h5py (for save model)
 
 (make sure file structure includes data and download as described in github)

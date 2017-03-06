@@ -52,7 +52,7 @@ def build_model():
 		output_dim=simple_configs.MAX_NB_WORDS, 
 		depth=simple_configs.DEPTH
 	)
-
+	
 	# ADD UP ACTUAL MODEL
 	model.add(embedding_layer)
 	model.add(s2s_layer)
