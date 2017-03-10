@@ -86,6 +86,7 @@ class DataHolder:
 
         X_data = self.get_X_batch()
         Y_data = self.get_Y_batch()
+
         self.start_index += TRAIN_BATCH_SIZE
         self.end_index += TRAIN_BATCH_SIZE if self.end_index < self.data_size else self.data_size
 
@@ -96,7 +97,8 @@ class DataHolder:
 
     # Now we need to convert this into a matrix of 1-hot vectors.  So it will be 3D with dimentions below
     def get_Y_batch(self):
-        Y_train = np.zeros((TRAIN_BATCH_SIZE, OUTPUT_MAX_LENGTH, MAX_NB_WORDS))
+        batch_size = self.end_index - self.start_index
+        Y_train = np.zeros((batch_size, OUTPUT_MAX_LENGTH, MAX_NB_WORDS))
         for r, row in enumerate(self.Y_data[self.start_index:self.end_index]):
             for c, i in enumerate(row):
                 Y_train[r][c][i] = 1
