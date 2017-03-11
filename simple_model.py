@@ -31,7 +31,7 @@ def build_model():
 	# ADD UP ACTUAL MODEL
 	model.add(embedding_layer)
 	model.add(s2s_layer)
-	model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', 'precision', 'recall'])
+	model.compile(loss='mse', optimizer='adam', metrics=['accuracy', 'precision', 'recall'])
 
 	print 'Model Built'
 	return model
