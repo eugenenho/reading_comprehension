@@ -49,7 +49,7 @@ def read_write_dataset(dataset, tier, prefix):
         answers_global = []
         types_global = []
 
-        for current_query in tqdm(dataset), desc="Preprocessing {}".format(tier):
+        for current_query in tqdm(dataset):
                         
             # Extract "query"
             question = current_query['query']
@@ -79,7 +79,6 @@ def read_write_dataset(dataset, tier, prefix):
                 answer = answer.replace("``", '" ')
                 answer_tokens = tokenize(answer)
                 answer_tokens_list.append(answer_tokens)
-                break
             answers_global.append(answer_tokens_list)
 
             # Extract "query_type"
@@ -87,6 +86,7 @@ def read_write_dataset(dataset, tier, prefix):
             types_global.append(query_type)
             
         print (len(questions_global), " queries processed.")
+        print (len(questions_global), len(passages_global), len(answers_global), len(types_global))
 
         # Check if the number of entries are the same across all four categories of info extraction
         assert len(questions_global) == len(passages_global) == len(answers_global) == len(types_global)    
@@ -99,7 +99,6 @@ def read_write_dataset(dataset, tier, prefix):
         questions_matrix = np.zeros((data_size, QUESTION_MAX_LENGTH))
         passages_matrix = np.zeros((data_size, PASSAGE_MAX_LENGTH))
         answers_matrix = np.zeros((data_size, ANSWER_MAX_LENGTH))
-        print 'saving questions'
         for i, q in enumerate(questions_global):
             # padding
             if len(q) < QUESTION_MAX_LENGTH: q.extend( [0] * (QUESTION_MAX_LENGTH - len(q)) )
@@ -107,7 +106,6 @@ def read_write_dataset(dataset, tier, prefix):
             questions_matrix[i] = np.array(q[:QUESTION_MAX_LENGTH])
         np.save(prefix + tier + 'questions_mat', questions_matrix)
 
-        print 'saving passages'
         for i, p in enumerate(passages_global):
             # padding
             if len(p) < PASSAGE_MAX_LENGTH: q.extend( [0] * (PASSAGE_MAX_LENGTH - len(q)) )
@@ -115,7 +113,6 @@ def read_write_dataset(dataset, tier, prefix):
             passages_matrix[i] = np.array(p[:PASSAGE_MAX_LENGTH])
         np.save(prefix + tier + 'passages_mat', passages_matrix)
 
-        print 'saving answers'
         for i, a in enumerate(answers_global):
             # padding
             if len(a) < ANSWER_MAX_LENGTH: a.extend( [0] * (ANSWER_MAX_LENGTH - len(q)) )
@@ -123,7 +120,6 @@ def read_write_dataset(dataset, tier, prefix):
             answers_matrix[i] = np.array(a[:ANSWER_MAX_LENGTH])
         np.save(prefix + tier + 'answers_mat', answers_matrix)
 
-        print 'done saving'
 
         # # Pickle
         # try:
