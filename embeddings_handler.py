@@ -24,12 +24,14 @@ class EmbeddingHolder(object):
 			embeddings_index[word] = coefs
 		f.close()
 		print 'built word map'
+		print 'embeddings_index', len(embeddings_index)
 
 		word_index = {}  # dictionary mapping label name to numeric id
 		f = open(TEXT_DATA_DIR)
 		for i, line in enumerate(f):
-			word_index[line] = i
+			word_index[line.lower().strip()] = i
 		print 'made vocabulary'
+		print 'vocabulary', len(word_index)
 
 		# prepare embedding matrix
 		self.embedding_matrix = np.zeros((MAX_NB_WORDS, EMBEDDING_DIM))
@@ -39,6 +41,7 @@ class EmbeddingHolder(object):
 			if embedding_vector is not None:
 				self.embedding_matrix[i] = embedding_vector
 		print 'Prepared embedding matrix.'
+		print 'mat:', self.embedding_matrix.shape
 		np.save(EMBEDDING_MAT_DIR, self.embedding_matrix)
 
 	def get_embeddings_mat(self):
