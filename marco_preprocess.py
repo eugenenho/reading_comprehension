@@ -154,6 +154,7 @@ def read_write_dataset(dataset, tier, prefix):
             # Extract "passages"
             passage_tokens_list = []
             for passage_num in range(len(current_query['passages'])):
+                if current_query['passages'][passage_num]['is_selected'] == 0: continue
                 passage = current_query['passages'][passage_num]['passage_text']
                 passage = passage.replace("''", '" ')
                 passage = passage.replace("``", '" ')
