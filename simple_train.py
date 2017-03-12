@@ -19,6 +19,7 @@ def train_model(nn_model):
         for i in tqdm(range(1, data.get_num_iterations())):
             X_batch, Y_batch = data.get_batch_data()
             if X_batch is None or Y_batch is None: break
+            print X_batch.shape, Y_batch.shape
             curr_loss = nn_model.train_on_batch(X_batch, Y_batch)
             print 'LOSS:', curr_loss
             if i % SAVE_PREDICTIONS_FREQUENCY == 0: 

@@ -40,25 +40,14 @@ class TFModel():
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
-        f_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True, activation=tanh)
-        b_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True, activation=tanh)
+        q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True)
+        p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True)
         
-        encoded_questions, final_state = tf.nn.dynamic_rnn(f_cell, questions, dtype=tf.float64)
-        print 'encoded_questions', encoded_questions
-        print 'final_state', final_state
-        encoded_passages = tf.nn.dynamic_rnn(b_cell, passages, initial_state=final_state, dtype=tf.float64)
-        # print encoded_questions
-        # encoded_questions = tf.concat(encoded_questions[1][0], encoded_questions[1][0])
-        # print encoded_questions
+        encoded_questions = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float64)
+        # encoded_passages = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float64)
 
-        # # Do i need an activation layer here?
-
-        # passages_entry = tf.concat(encoded_questions, passages)
-        # full_encodings = tf.nn.dynamic_rnn(f_cell, passages_entry, dtype=tf.float64)
-        # final_encodings = tf.concat(full_encodings[1][0], full_encodings[1][0])
-        # print final_encodings
-
-        # preds = tf.nn.sigmoid(final_encodings)
+        encoded_info = tf.concat(encoded_questions, encoded_passages)
+        
         preds = encoded_questions
         return preds
 
