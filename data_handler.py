@@ -1,6 +1,8 @@
 import numpy as np
 import cPickle
 
+from sklearn.preprocessing import OneHotEncoder
+
 from simple_configs import TRAIN_BATCH_SIZE, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS
 
 class DataHolder:
@@ -13,8 +15,8 @@ class DataHolder:
 
         found = False
         try:
-            self.X_data = np.load("./data/marco/" + self.data_set + ".ids.xdata.npy")
-            self.Y_data = np.load("./data/marco/" + self.data_set + ".ids.ydata.npy")
+            self.X_data = np.load("./data/marco/" + self.data_set + ".xdata.npy")
+            self.Y_data = np.load("./data/marco/" + self.data_set + ".ydata.npy")
             found = True
         except Exception as e:
             print 'could not find premade matrix. creating it...'
@@ -45,20 +47,15 @@ class DataHolder:
         # pad to len 1000 with zeros (still need to figure out masking in the model)
         for i, tp in enumerate(train_passages):
             curr_input_list = train_questions[i]
-            curr_input_list.append(MAX_NB_WORDS - 1) #special char between
             for p in tp:
                 curr_input_list.extend(p)
 
-            # remove words witout embeddings (really uncommon words)
-            for w in reversed(curr_input_list):
-                if int(w) > MAX_NB_WORDS: curr_input_list.remove(w)
-
             # padding
             if len(curr_input_list) < INPUT_MAX_LENGTH:
-                curr_input_list.extend([MAX_NB_WORDS - 1] + [0] * (INPUT_MAX_LENGTH - len(curr_input_list) - 1) )
+                curr_input_list.extend([0] * (INPUT_MAX_LENGTH - len(curr_input_list)) )
 
             X_data[i] = np.array(curr_input_list[:INPUT_MAX_LENGTH])
-        np.save("./data/marco/" + self.data_set + ".ids.xdata", X_data)
+        np.save("./data/marco/" + self.data_set + ".xdata", X_data)
         print 'built x data'
         return X_data
 
@@ -69,16 +66,14 @@ class DataHolder:
         for i, ans in enumerate(answers_list):
             # weird thing here, the answer is stores as a list of lists
             ans = ans[0] if len(ans) == 1 else []
-            # remove words witout embeddings (really uncommon words)
-            for w in reversed(ans): 
-                if int(w) > MAX_NB_WORDS: ans.remove(w)
+ 
             # pad / truncate values
             if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [0] * (OUTPUT_MAX_LENGTH - len(ans)) )
             # add to matrix
             Y_data_indexes[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
 
         Y_data_indexes = Y_data_indexes.astype(int)
-        np.save("./data/marco/" + self.data_set + ".ids.ydata", Y_data_indexes)
+        np.save("./data/marco/" + self.data_set + ".ydata", Y_data_indexes)
 
         print 'built y data'
         return Y_data_indexes
@@ -109,8 +104,13 @@ class DataHolder:
 
     # Now we need to convert this into a matrix of 1-hot vectors.  So it will be 3D with dimentions below
     def get_Y_batch(self):
-        batch_size = self.end_index - self.start_index
-        Y_data = np.zeros((batch_size, OUTPUT_MAX_LENGTH, MAX_NB_WORDS))
+        return self.build_Y_batch(self.Y_data[self.start_index:self.end_index])
+
+    def build_Y_batch(self, Y_batch_full):
+        # enc = OneHotEncoder()
+        # return enc.fit(Y_batch_full)
+        batch = self.end_index - self.start_index
+        Y_data = np.zeros((batch, OUTPUT_MAX_LENGTH, 228999))
         for r, row in enumerate(self.Y_data[self.start_index:self.end_index]):
             for c, i in enumerate(row):
                 Y_data[r][c][i] = 1
