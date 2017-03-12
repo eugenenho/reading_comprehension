@@ -14,7 +14,7 @@ def build_model():
 	
 	# BUILD ACTUAL MODEL
 	embedding_layer = Embedding(
-			MAX_NB_WORDS,
+			228999,
 		    EMBEDDING_DIM,
 		    weights=[embedding_matrix],
 		    input_length=INPUT_MAX_LENGTH,
@@ -24,7 +24,7 @@ def build_model():
 		batch_input_shape=(None, INPUT_MAX_LENGTH, EMBEDDING_DIM),
 		hidden_dim=HIDDEN_DIM, 
 		output_length=OUTPUT_MAX_LENGTH, 
-		output_dim=MAX_NB_WORDS, 
+		output_dim=228999, 
 		depth=DEPTH
 	)
 	
