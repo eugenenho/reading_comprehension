@@ -1,6 +1,7 @@
 import numpy as np
 import cPickle
 
+from sklearn.preprocessing import OneHotEncoder
 from simple_configs import TRAIN_BATCH_SIZE, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH
 
 class TFDataHolder:
@@ -32,9 +33,6 @@ class TFDataHolder:
 		self.data_size = len(questions_list)
 		Q_data = np.zeros((self.data_size, QUESTION_MAX_LENGTH))
 		for i, question in enumerate(questions_list):
-			# truncate to smaller list of words
-			for w in reversed(question):
-				if int(w) >= MAX_NB_WORDS: question.remove(w)
 			# padding
 			if len(question) < QUESTION_MAX_LENGTH:
 				question.extend([MAX_NB_WORDS - 1] + [0] * (QUESTION_MAX_LENGTH - len(question) - 1) )
@@ -51,9 +49,6 @@ class TFDataHolder:
 		P_data = np.zeros((self.data_size, PASSAGE_MAX_LENGTH))
 		for i, p_l in enumerate(passages_list):
 			for passage in p_l:
-				# truncate to smaller list of words
-				for w in reversed(passage):
-					if int(w) >= MAX_NB_WORDS: passage.remove(w)
 				# padding
 				if len(passage) < PASSAGE_MAX_LENGTH:
 					passage.extend([0] * (PASSAGE_MAX_LENGTH - len(passage)) )
@@ -72,9 +67,6 @@ class TFDataHolder:
 		for i, ans in enumerate(answers_list):
 			# weird thing here, the answer is stores as a list of lists
 			ans = ans[0] if len(ans) == 1 else []
-			# remove words witout embeddings (really uncommon words)
-			for w in reversed(ans): 
-				if int(w) >= MAX_NB_WORDS: ans.remove(w)
 			# pad / truncate values
 			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [0] * (OUTPUT_MAX_LENGTH - len(ans)) )
 			# add to matrix
@@ -86,13 +78,13 @@ class TFDataHolder:
 		print 'built y data'
 		return A_data_indexes
 
+	def build_full_A_data(self):
+		enc = OneHotEncoder()
+		return enc.fit(self.A_data)
+
 	def get_full_data(self):
 		print 'building full Y data'
-		A_data = np.zeros((self.A_data.shape[0], OUTPUT_MAX_LENGTH, MAX_NB_WORDS))
-		for r, row in enumerate(self.A_data):
-			for c, i in enumerate(row):
-				A_data[r][c][i] = 1
-		return self.P_data, self.Q_data, A_data
+		return self.P_data, self.Q_data, self.build_full_A_data()
 
 
 

@@ -14,9 +14,9 @@ class TFModel():
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
         """
-        self.question_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
-        self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
-        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
+        self.questions_placeholder = tf.placeholder(tf.int64, shape=(None, QUESTION_MAX_LENGTH), name="questions")
+        self.passages_placeholder = tf.placeholder(tf.int64, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
+        self.answers_placeholder = tf.placeholder(tf.int64, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
 
     def create_feed_dict(self, questions_batch, passages_batch, answers_batch=None):
         """Creates the feed_dict for the model.
@@ -30,30 +30,36 @@ class TFModel():
         return feed_dict
 
     def add_embedding(self, placeholder):  
-        large_embeddings = tf.nn.embedding_lookup(tf.Variable(self.pretrained_embeddings), placeholder, partition_strategy='mod', name=None, validate_indices=True, max_norm=None)
-        return large_embeddings
-        # embeddings = tf.reshape(large_embeddings, [-1, self.config.n_features * self.config.embed_size])
+        embed_vals = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.nn.embedding_lookup(embed_vals, placeholder)
+        return embeddings
+        # embeddings = tf.reshape(embeddings, [-1, self.config.n_features * self.config.embed_size])
         # return embeddings
 
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
-        cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+        f_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True, activation=tanh)
+        b_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True, activation=tanh)
         
-        encoded_questions = tf.nn.bidirectional_dynamic_rnn(cell, questions, dtype=tf.float32)
-        encoded_questions = tf.concat(encoded_questions[1][0], encoded_questions[1][0])
-        print encoded_questions
+        encoded_questions, final_state = tf.nn.dynamic_rnn(f_cell, questions, dtype=tf.float64)
+        print 'encoded_questions', encoded_questions
+        print 'final_state', final_state
+        encoded_passages = tf.nn.dynamic_rnn(b_cell, passages, initial_state=final_state, dtype=tf.float64)
+        # print encoded_questions
+        # encoded_questions = tf.concat(encoded_questions[1][0], encoded_questions[1][0])
+        # print encoded_questions
 
-        # Do i need an activation layer here?
+        # # Do i need an activation layer here?
 
-        passages_entry = tf.concat(encoded_questions, passages)
-        full_encodings = tf.nn.bidirectional_dynamic_rnn(cell, passages_entry, dtype=tf.float32)
-        final_encodings = tf.concat(full_encodings[1][0], full_encodings[1][0])
-        print final_encodings
+        # passages_entry = tf.concat(encoded_questions, passages)
+        # full_encodings = tf.nn.dynamic_rnn(f_cell, passages_entry, dtype=tf.float64)
+        # final_encodings = tf.concat(full_encodings[1][0], full_encodings[1][0])
+        # print final_encodings
 
-        preds = tf.nn.sigmoid(final_encodings)
-
+        # preds = tf.nn.sigmoid(final_encodings)
+        preds = encoded_questions
         return preds
 
     def add_loss_op(self, preds):
@@ -98,11 +104,7 @@ class TFModel():
         self.train_op = self.add_training_op(self.loss)
 
     def __init__(self, embeddings):
-        print embeddings
         self.pretrained_embeddings = embeddings
-        self.questions_placeholder = None
-        self.passages_placeholder = None
-        self.answers_placeholder = None
         self.build()
 
 if __name__ == "__main__":
