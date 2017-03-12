@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from collections import defaultdict
 
 from simple_configs import EMBEDDING_DIM, MAX_NB_WORDS, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
@@ -15,7 +16,7 @@ class EmbeddingHolder(object):
 			self.build_embeddings_mat()
 
 	def build_embeddings_mat(self):
-		embeddings_index = {} # word -> embedding vector
+		embeddings_index = defaultdict(lambda: None) # word -> embedding vector
 		f = open(os.path.join(GLOVE_DIR, 'glove.6B.' + str(EMBEDDING_DIM) + 'd.txt'))
 		for line in f:
 			values = line.split()
@@ -23,25 +24,27 @@ class EmbeddingHolder(object):
 			coefs = np.asarray(values[1:], dtype='float32')
 			embeddings_index[word] = coefs
 		f.close()
-		print 'built word map'
-		print 'embeddings_index', len(embeddings_index)
 
 		word_index = {}  # dictionary mapping label name to numeric id
 		f = open(TEXT_DATA_DIR)
 		for i, line in enumerate(f):
-			word_index[line.lower().strip()] = i
-		print 'made vocabulary'
-		print 'vocabulary', len(word_index)
+			word = line.lower().strip()
+			word_index[word] = i if word not in word_index else word_index[word]
+		size_of_mat = i + 1
 
 		# prepare embedding matrix
-		self.embedding_matrix = np.zeros((MAX_NB_WORDS, EMBEDDING_DIM))
+		self.embedding_matrix = np.zeros((size_of_mat, EMBEDDING_DIM))
 		for word, i in word_index.iteritems():
-			if i >= MAX_NB_WORDS: continue
-			embedding_vector = embeddings_index.get(word)
+			embedding_vector = embeddings_index[word]
 			if embedding_vector is not None:
 				self.embedding_matrix[i] = embedding_vector
+
+		print 'the check embedding:', self.embedding_matrix[4]
+		print 'was check embedding:', self.embedding_matrix[41]
+		print 'zeros check:', self.embedding_matrix[0]
+
 		print 'Prepared embedding matrix.'
-		print 'mat:', self.embedding_matrix.shape
+
 		np.save(EMBEDDING_MAT_DIR, self.embedding_matrix)
 
 	def get_embeddings_mat(self):
