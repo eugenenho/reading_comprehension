@@ -38,11 +38,6 @@ class EmbeddingHolder(object):
 			embedding_vector = embeddings_index[word]
 			if embedding_vector is not None:
 				self.embedding_matrix[i] = embedding_vector
-
-		print 'the check embedding:', self.embedding_matrix[4]
-		print 'was check embedding:', self.embedding_matrix[41]
-		print 'zeros check:', self.embedding_matrix[0]
-
 		print 'Prepared embedding matrix.'
 
 		np.save(EMBEDDING_MAT_DIR, self.embedding_matrix)
