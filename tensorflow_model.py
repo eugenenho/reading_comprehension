@@ -40,13 +40,18 @@ class TFModel():
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
-        q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True)
-        p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, state_is_tuple=True)
-        
+        q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
         encoded_questions = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float64)
-        # encoded_passages = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float64)
+        print 'questions', encoded_questions
+        
+        p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+        encoded_passages = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float64)
+        print 'passages', encoded_passages
+        
+        encoded_info = tf.concat(encoded_questions[0], encoded_passages[0])
+        print 'info', encoded_info
 
-        encoded_info = tf.concat(encoded_questions, encoded_passages)
+        # preds = tf.nn.ctc_beam_search_decoder(inputs, sequence_length, beam_width=100, top_paths=1, merge_repeated=True)
         
         preds = encoded_questions
         return preds
