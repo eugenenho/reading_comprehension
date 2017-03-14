@@ -25,11 +25,11 @@ class TFDataHolder:
 			self.P_data = self.build_P_data()
 			self.A_data = self.build_A_data() 
 
-		self.Q_data = self.Q_data.astype(np.float32)
-		self.P_data = self.P_data.astype(np.float32)
-		self.A_data = self.A_data.astype(np.float32)
-		self.start_token = self.build_start_token()
 		self.data_size = 2000#self.Q_data.shape[0]
+		self.Q_data = self.Q_data[:self.data_size]
+		self.P_data = self.P_data[:self.data_size]
+		self.A_data = self.A_data[:self.data_size]
+		self.start_token = self.build_start_token()
 
 		self.start_iter = 0
 
@@ -97,19 +97,18 @@ class TFDataHolder:
 		return self.Q_data, self.P_data, self.A_data, self.start_token
 
 	def get_batch(self):
-		print 'get next batch\n'
 		if self.start_iter >= self.data_size:
 			return None
-
 		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
-
-		return (
+		to_return = (
 				self.Q_data[self.start_iter:end], 
 				self.P_data[self.start_iter:end], 
 				self.A_data[self.start_iter:end], 
 				self.start_token[:batch_size]
 				)
+		print to_return
+		return to_return
 
 
 
