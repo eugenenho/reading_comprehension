@@ -101,6 +101,7 @@ class TFModel():
 
     def train_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
+        print 'traiing on one batch'
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, answers_batch=answers_batch)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         print 'loss:', loss
