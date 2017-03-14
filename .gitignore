@@ -1,3 +1,6 @@
 .DS_Store
 /data
 /download
+model_save
+baseline_model
+*.pyc 
