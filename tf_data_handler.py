@@ -13,8 +13,8 @@ class TFDataHolder:
 
 		found = False
 		try:
-			self.P_data = np.load("./data/marco/" + self.data_set + ".data.p_data.npy")
 			self.Q_data = np.load("./data/marco/" + self.data_set + ".data.q_data.npy")
+			self.P_data = np.load("./data/marco/" + self.data_set + ".data.p_data.npy")
 			self.A_data = np.load("./data/marco/" + self.data_set + ".data.a_data.npy")
 			found = True
 		except Exception as e:
@@ -80,11 +80,11 @@ class TFDataHolder:
 
 	def build_full_A_data(self):
 		enc = OneHotEncoder()
-		return enc.fit(self.A_data)
+		return enc.fit_transform(self.A_data)
 
 	def get_full_data(self):
 		print 'building full Y data'
-		return self.P_data, self.Q_data, self.build_full_A_data()
+		return self.Q_data, self.P_data, self.build_full_A_data()
 
 
 
