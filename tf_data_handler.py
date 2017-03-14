@@ -13,9 +13,9 @@ class TFDataHolder:
 
 		found = False
 		try:
-			self.P_data = np.load("./data/marco/" + self.data_set + ".ids.q_data.npy")
-			self.Q_data = np.load("./data/marco/" + self.data_set + ".ids.p_data.npy")
-			self.A_data = np.load("./data/marco/" + self.data_set + ".ids.a_data.npy")
+			self.Q_data = np.load("./data/marco/" + self.data_set + ".data.q_data.npy")
+			self.P_data = np.load("./data/marco/" + self.data_set + ".data.p_data.npy")
+			self.A_data = np.load("./data/marco/" + self.data_set + ".data.a_data.npy")
 			found = True
 		except Exception as e:
 			print 'could not find premade tf matrix. creating it...'
@@ -38,7 +38,7 @@ class TFDataHolder:
 				question.extend([MAX_NB_WORDS - 1] + [0] * (QUESTION_MAX_LENGTH - len(question) - 1) )
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
-		np.save("./data/marco/" + self.data_set + ".ids.q_data", Q_data)
+		np.save("./data/marco/" + self.data_set + ".data.q_data", Q_data)
 
 		print 'built q data'
 		return Q_data
@@ -55,7 +55,7 @@ class TFDataHolder:
 
 				P_data[i] = np.array(passage[:PASSAGE_MAX_LENGTH])
 
-		np.save("./data/marco/" + self.data_set + ".ids.p_data", P_data)
+		np.save("./data/marco/" + self.data_set + ".data.p_data", P_data)
 
 		print 'built p data'
 		return P_data
@@ -66,25 +66,25 @@ class TFDataHolder:
 		A_data_indexes = np.zeros((self.data_size, OUTPUT_MAX_LENGTH))
 		for i, ans in enumerate(answers_list):
 			# weird thing here, the answer is stores as a list of lists
-			ans = ans[0] if len(ans) == 1 else []
+			ans = ans[0] if len(ans) >= 1 else []
 			# pad / truncate values
 			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [0] * (OUTPUT_MAX_LENGTH - len(ans)) )
 			# add to matrix
 			A_data_indexes[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
 
 		A_data_indexes = A_data_indexes.astype(int)
-		np.save("./data/marco/" + self.data_set + ".ids.a_data", A_data_indexes)
+		np.save("./data/marco/" + self.data_set + ".data.a_data", A_data_indexes)
 
 		print 'built y data'
 		return A_data_indexes
 
 	def build_full_A_data(self):
 		enc = OneHotEncoder()
-		return enc.fit(self.A_data)
+		return enc.fit_transform(self.A_data)
 
 	def get_full_data(self):
 		print 'building full Y data'
-		return self.P_data, self.Q_data, self.build_full_A_data()
+		return self.Q_data, self.P_data, self.build_full_A_data()
 
 
 
