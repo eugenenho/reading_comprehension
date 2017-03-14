@@ -20,15 +20,17 @@ class TFModel():
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
         self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
+        self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None):
+    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None, dropout=0.5):
         """Creates the feed_dict for the model.
         NOTE: You do not have to do anything here.
         """
         feed_dict = {
             self.questions_placeholder : questions_batch,
             self.passages_placeholder : passages_batch,
-            self.start_token_placeholder : start_token_batch
+            self.start_token_placeholder : start_token_batch,
+            self.dropout_placeholder : dropout
         }
         if answers_batch is not None: feed_dict[self.answers_placeholder] = answers_batch
         return feed_dict
@@ -73,12 +75,9 @@ class TFModel():
 
                 U = tf.get_variable('U', shape=(2 * HIDDEN_DIM, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
                 b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
-                o_t = tf.matmul(o_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
+                o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
+                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                # o_drop_t = tf.nn.dropout(h_t, self.dropout_placeholder)
-                # y_t = tf.matmul(o_drop_t, U) + b_2
-
-                y_t = o_t
                 inp = y_t
 
                 preds.append(y_t)

@@ -97,7 +97,6 @@ class TFDataHolder:
 		return self.Q_data, self.P_data, self.A_data, self.start_token
 
 	def get_batch(self):
-		print 'get batch: start', self.start_iter, 'data size:', self.data_size
 		if self.start_iter >= self.data_size:
 			self.start_iter = 0
 			return None
@@ -111,8 +110,6 @@ class TFDataHolder:
 				)
 		self.start_iter += TRAIN_BATCH_SIZE
 		return to_return
-
-
 
 if __name__ == "__main__":
 	print 'Lets check out data set'
