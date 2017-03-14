@@ -2,6 +2,8 @@ import time
 import tensorflow as tf
 import numpy as np
 
+from progbar import Progbar
+
 from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
@@ -14,9 +16,9 @@ class TFModel():
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
         """
-        self.questions_placeholder = tf.placeholder(tf.int64, shape=(None, QUESTION_MAX_LENGTH), name="questions")
-        self.passages_placeholder = tf.placeholder(tf.int64, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
-        self.answers_placeholder = tf.placeholder(tf.int64, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
+        self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
+        self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
+        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
 
     def create_feed_dict(self, questions_batch, passages_batch, answers_batch=None):
         """Creates the feed_dict for the model.
@@ -39,22 +41,29 @@ class TFModel():
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
+        with tf.variable_scope("question"):
+            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            q_outputs, q_state_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32)
 
-        q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        encoded_questions = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float64)
-        print 'questions', encoded_questions
-        
-        p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        encoded_passages = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float64)
-        print 'passages', encoded_passages
-        
-        encoded_info = tf.concat(encoded_questions[0], encoded_passages[0])
-        print 'info', encoded_info
+        with tf.variable_scope("passage"):
+            p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32)
 
-        # preds = tf.nn.ctc_beam_search_decoder(inputs, sequence_length, beam_width=100, top_paths=1, merge_repeated=True)
-        
-        preds = encoded_questions
-        return preds
+        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_hidden = tf.concat(2, [q_last, p_last])
+
+        with tf.variable_scope("decode"):
+            U = tf.get_variable('U', shape=(2 * HIDDEN_DIM, MAX_NB_WORDS * OUTPUT_MAX_LENGTH), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+            b = tf.get_variable('b', shape=(MAX_NB_WORDS*OUTPUT_MAX_LENGTH, ), dtype=tf.float32)
+            
+            q_p_hidden = tf.reshape(q_p_hidden, [-1, 2 * HIDDEN_DIM])
+            
+            output = tf.reshape(tf.matmul(q_p_hidden, U) + b, [OUTPUT_MAX_LENGTH, -1, MAX_NB_WORDS])
+            print output
+
+            preds = tf.nn.ctc_beam_search_decoder(output, OUTPUT_MAX_LENGTH, beam_width=100, top_paths=1, merge_repeated=True)
+        return 'preds'
 
     def add_loss_op(self, preds):
         y = self.answers_placeholder   
@@ -70,24 +79,50 @@ class TFModel():
     def train_on_batch(self, sess, questions_batch, passages_batch, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
         feed = self.create_feed_dict(questions_batch, passages_batch, answers_batch=answers_batch)
-        _, loss, _ = sess.run([self.train_op, self.loss, _], feed_dict=feed)
+        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        print 'loss:', loss
         return loss
 
     def run_epoch(self, sess, q_data, p_data, a_data):
-        prog = Progbar(target=1 + int(len(train) / TRAIN_BATCH_SIZE))
-        losses = []
-        for i, batch in enumerate(minibatches(train, TRAIN_BATCH_SIZE)):
-            loss, _ = self.train_on_batch(sess, *batch)
+        prog = Progbar(target=1 + int(len(q_data) / TRAIN_BATCH_SIZE))
+        
+        losses = list()
+        batches_list = self.minibatches(q_data, p_data, a_data, TRAIN_BATCH_SIZE)
+        for i, batch in enumerate(batches_list):
+            q_batch = batch[0]
+            p_batch = batch[1]
+            a_batch = batch[2]
+
+            loss = self.train_on_batch(sess, q_batch, p_batch, a_batch)
+            print 'here'
             losses.append(loss)
+
             prog.update(i + 1, [("train loss", loss)])
 
         return losses
 
+    def minibatches(self, q_data, p_data, a_data, batch_size):
+        time_start = time.time()
+        start = 0
+        end = batch_size
+        batches = list()
+        while True:
+            batches.append( (q_data[start:end], p_data[start:end], a_data[start:end]) )
+
+            end = min( start + batch_size, len(q_data) )
+            start += batch_size
+
+            if start >= len(q_data): break
+
+        print 'split batches done, and took', time.time() - time_start, 'seconds'
+        return batches
+
+
     def fit(self, sess, q_data, p_data, a_data):
         losses = []
         for epoch in range(NUM_EPOCS):
-            print "Epoch %d out of %d", epoch + 1, NUM_EPOCS
-            loss, _ = self.run_epoch(sess, train)
+            print "Epoch:", epoch + 1, "out of", NUM_EPOCS
+            loss = self.run_epoch(sess, q_data, p_data, a_data)
             losses.append(loss)
         return losses
 
@@ -109,7 +144,7 @@ if __name__ == "__main__":
         print "Building model..."
         start = time.time()
         model = TFModel(embeddings)
-        print "took %.2f seconds", time.time() - start
+        print "took", time.time() - start, "seconds"
 
         init = tf.global_variables_initializer()
 
