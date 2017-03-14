@@ -92,7 +92,6 @@ class TFModel():
         y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
         loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
         loss = tf.reduce_mean(loss_mat)
-
         return loss
 
     def add_training_op(self, loss):        
@@ -101,19 +100,17 @@ class TFModel():
 
     def train_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
-        print 'traiing on one batch'
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, answers_batch=answers_batch)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-        print 'loss:', loss
         return loss
 
-    def run_epoch(self, sess, q_data, p_data, a_data, s_t):
-        prog = Progbar(target=1 + int(len(q_data) / TRAIN_BATCH_SIZE))
+    def run_epoch(self, sess, data):
+        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE))
         
         losses = list()
-        print 'make batches'
-        batches_list = self.minibatches(q_data, p_data, a_data, s_t, TRAIN_BATCH_SIZE)
-        for i, batch in enumerate(batches_list):
+        i = 0
+        batch = data.get_batch()
+        while batch is not None:
             q_batch = batch[0]
             p_batch = batch[1]
             a_batch = batch[2]
@@ -123,10 +120,12 @@ class TFModel():
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
+            
+            i += 1
 
         return losses
 
-    def minibatches(self, q_data, p_data, a_data, s_t, batch_size):
+    def minibatches(self, data):
         time_start = time.time()
         start = 0
         end = batch_size
@@ -144,11 +143,11 @@ class TFModel():
         return batches
 
 
-    def fit(self, sess, q_data, p_data, a_data, s_t):
+    def fit(self, sess, data):
         losses = []
         for epoch in range(NUM_EPOCS):
             print "Epoch:", epoch + 1, "out of", NUM_EPOCS
-            loss = self.run_epoch(sess, q_data, p_data, a_data, s_t)
+            loss = self.run_epoch(sess, data)
             losses.append(loss)
         return losses
 
@@ -165,7 +164,6 @@ class TFModel():
 if __name__ == "__main__":
     data = TFDataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
-    q_data, p_data, a_data, s_t = data.get_full_data()
     with tf.Graph().as_default():
         print "Building model..."
         start = time.time()
@@ -177,7 +175,7 @@ if __name__ == "__main__":
         with tf.Session() as session:
             session.run(init)
             print 'ran init, fitting.....'
-            losses = model.fit(session, q_data, p_data, a_data, s_t)
+            losses = model.fit(session, data)
 
     print 'losses list:', losses
 
