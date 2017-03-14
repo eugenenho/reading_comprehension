@@ -120,28 +120,10 @@ class TFModel():
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
-            
+
             i += 1
 
         return losses
-
-    def minibatches(self, data):
-        time_start = time.time()
-        start = 0
-        end = batch_size
-        batches = list()
-        while True:
-            s_t_batch = np.zeros((end - start, MAX_NB_WORDS))
-            batches.append( (q_data[start:end], p_data[start:end], a_data[start:end], s_t_batch) )
-
-            start += batch_size
-            end = min( start + batch_size, len(q_data) )
-
-            if start >= 1000: break
-
-        print 'split batches done, and took', time.time() - time_start, 'seconds'
-        return batches
-
 
     def fit(self, sess, data):
         losses = []
@@ -172,7 +154,10 @@ if __name__ == "__main__":
 
         init = tf.global_variables_initializer()
         print 'initialzed variables'
-        with tf.Session() as session:
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth=True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.4
+        with tf.Session(config=config) as session:
             session.run(init)
             print 'ran init, fitting.....'
             losses = model.fit(session, data)
