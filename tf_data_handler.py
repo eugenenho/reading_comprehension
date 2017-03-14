@@ -25,11 +25,14 @@ class TFDataHolder:
 			self.P_data = self.build_P_data()
 			self.A_data = self.build_A_data() 
 
-		self.Q_data = self.Q_data.astype(np.float32)
-		self.P_data = self.P_data.astype(np.float32)
-		self.A_data = self.A_data.astype(np.float32)
+		self.data_size = 2000#self.Q_data.shape[0]
+		self.Q_data = self.Q_data[:self.data_size]
+		self.P_data = self.P_data[:self.data_size]
+		self.A_data = self.A_data[:self.data_size]
+		self.start_token = self.build_start_token()
 
-		self.data_size = self.Q_data.shape[0]
+		self.start_iter = 0
+
 
 	# This constructs the data from the pickled objects
 	def build_Q_data(self):
@@ -82,26 +85,48 @@ class TFDataHolder:
 		print 'built y data'
 		return A_data_indexes
 
-	def build_full_A_data(self):
-		enc = OneHotEncoder(dtype=np.float32)
-		return enc.fit_transform(self.A_data)
 
 	def build_start_token(self):
-		token = np.zeros((MAX_NB_WORDS))
-		token[1] = 1
-		return token
+		token_mat = np.zeros((TRAIN_BATCH_SIZE, MAX_NB_WORDS))
+		for row in token_mat:
+			row[1] = 1
+		return token_mat
 
 	def get_full_data(self):
 		print 'building full Y data'
-		return self.Q_data, self.P_data, self.build_full_A_data(), self.build_start_token()
+		return self.Q_data, self.P_data, self.A_data, self.start_token
+
+	def get_batch(self):
+		if self.start_iter >= self.data_size:
+			return None
+		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
+		batch_size = end - self.start_iter
+		to_return = (
+				self.Q_data[self.start_iter:end], 
+				self.P_data[self.start_iter:end], 
+				self.A_data[self.start_iter:end], 
+				self.start_token[:batch_size]
+				)
+		print to_return
+		return to_return
+
+
 
 if __name__ == "__main__":
 	print 'Lets check out data set'
 	data_module = TFDataHolder('train')
-	print 'Length of Q_data:', len(data_module.Q_data)
-	print 'Length of P_data', len(data_module.P_data)
-	print 'Length of A_data', len(data_module.A_data)
+	print 'Length of Q_data:', data_module.Q_data.shape
+	print 'Length of P_data', data_module.P_data.shape
+	print 'Length of A_data', data_module.A_data.shape
+	print 'Length of Start Token', data_module.start_token.shape
 	print 'Data Size', data_module.data_size
+
+	print 'Making batch'
+	batch = data_module.get_batch()
+	print 'Batch Q', batch[0].shape
+	print 'Batch P', batch[1].shape
+	print 'Batch A', batch[2].shape
+	print 'Batch ST', batch[3].shape
 
 
 

@@ -10,7 +10,7 @@ from embeddings_handler import EmbeddingHolder
 
 from simple_configs import NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
-# MASKING AND DROPOUT!!!
+# MASKING AND DROPOUT!!!, and save as we go, and data memory handling
 class TFModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -18,7 +18,7 @@ class TFModel():
         """
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
-        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
+        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
         self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
 
     def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None):
@@ -89,10 +89,9 @@ class TFModel():
         return preds
 
     def add_loss_op(self, preds):
-        y = self.answers_placeholder   
+        y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
         loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
         loss = tf.reduce_mean(loss_mat)
-
         return loss
 
     def add_training_op(self, loss):        
@@ -103,52 +102,34 @@ class TFModel():
         """Perform one step of gradient descent on the provided batch of data."""
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, answers_batch=answers_batch)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-        print 'loss:', loss
         return loss
 
-    def run_epoch(self, sess, q_data, p_data, a_data, s_t):
-        prog = Progbar(target=1 + int(len(q_data) / TRAIN_BATCH_SIZE))
+    def run_epoch(self, sess, data):
+        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE))
         
         losses = list()
-        print 'make batches'
-        batches_list = self.minibatches(q_data, p_data, a_data, s_t, TRAIN_BATCH_SIZE)
-        print 'batches:', batches_list[0]
-        for i, batch in enumerate(batches_list):
+        i = 0
+        batch = data.get_batch()
+        while batch is not None:
             q_batch = batch[0]
             p_batch = batch[1]
             a_batch = batch[2]
+            s_t_batch = batch[3]
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, a_batch, s_t)
-            print 'here'
+            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, a_batch)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
 
+            i += 1
+
         return losses
 
-    def minibatches(self, q_data, p_data, a_data, s_t, batch_size):
-        time_start = time.time()
-        start = 0
-        end = batch_size
-        batches = list()
-        while True:
-            s_t_batch = np.zeros((end - start, MAX_NB_WORDS)) + s_t
-            batches.append( (q_data[start:end], p_data[start:end], a_data[start:end], s_t_batch) )
-
-            start += batch_size
-            end = min( start + batch_size, len(q_data) )
-
-            if start >= len(q_data): break
-
-        print 'split batches done, and took', time.time() - time_start, 'seconds'
-        return batches
-
-
-    def fit(self, sess, q_data, p_data, a_data, s_t):
+    def fit(self, sess, data):
         losses = []
         for epoch in range(NUM_EPOCS):
             print "Epoch:", epoch + 1, "out of", NUM_EPOCS
-            loss = self.run_epoch(sess, q_data, p_data, a_data, s_t)
+            loss = self.run_epoch(sess, data)
             losses.append(loss)
         return losses
 
@@ -165,7 +146,6 @@ class TFModel():
 if __name__ == "__main__":
     data = TFDataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
-    q_data, p_data, a_data, s_t = data.get_full_data()
     with tf.Graph().as_default():
         print "Building model..."
         start = time.time()
@@ -174,10 +154,13 @@ if __name__ == "__main__":
 
         init = tf.global_variables_initializer()
         print 'initialzed variables'
-        with tf.Session() as session:
+        config = tf.ConfigProto()
+        # config.gpu_options.allow_growth=True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.6
+        with tf.Session(config=config) as session:
             session.run(init)
             print 'ran init, fitting.....'
-            losses = model.fit(session, q_data, p_data, a_data, s_t)
+            losses = model.fit(session, data)
 
     print 'losses list:', losses
 
