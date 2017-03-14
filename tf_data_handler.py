@@ -86,9 +86,14 @@ class TFDataHolder:
 		enc = OneHotEncoder(dtype=np.float32)
 		return enc.fit_transform(self.A_data)
 
+	def build_start_token(self):
+		token = np.zeros((MAX_NB_WORDS))
+		token[1] = 1
+		return token
+
 	def get_full_data(self):
 		print 'building full Y data'
-		return self.Q_data, self.P_data, self.build_full_A_data()
+		return self.Q_data, self.P_data, self.build_full_A_data(), self.build_start_token()
 
 
 
