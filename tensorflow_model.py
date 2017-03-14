@@ -18,7 +18,7 @@ class TFModel():
         """
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
-        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
+        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
         self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
 
     def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None):
@@ -89,7 +89,7 @@ class TFModel():
         return preds
 
     def add_loss_op(self, preds):
-        y = self.answers_placeholder   
+        y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
         loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
         loss = tf.reduce_mean(loss_mat)
 
@@ -112,14 +112,13 @@ class TFModel():
         losses = list()
         print 'make batches'
         batches_list = self.minibatches(q_data, p_data, a_data, s_t, TRAIN_BATCH_SIZE)
-        print 'batches:', batches_list[0]
         for i, batch in enumerate(batches_list):
             q_batch = batch[0]
             p_batch = batch[1]
             a_batch = batch[2]
+            s_t_batch = batch[3]
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, a_batch, s_t)
-            print 'here'
+            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, a_batch)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -132,13 +131,13 @@ class TFModel():
         end = batch_size
         batches = list()
         while True:
-            s_t_batch = np.zeros((end - start, MAX_NB_WORDS)) + s_t
+            s_t_batch = np.zeros((end - start, MAX_NB_WORDS))
             batches.append( (q_data[start:end], p_data[start:end], a_data[start:end], s_t_batch) )
 
             start += batch_size
             end = min( start + batch_size, len(q_data) )
 
-            if start >= len(q_data): break
+            if start >= 10000: break
 
         print 'split batches done, and took', time.time() - time_start, 'seconds'
         return batches

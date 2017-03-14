@@ -84,7 +84,7 @@ class TFDataHolder:
 
 	def build_full_A_data(self):
 		enc = OneHotEncoder(dtype=np.float32)
-		return enc.fit_transform(self.A_data)
+		return enc.fit_transform(self.A_data).todense()
 
 	def build_start_token(self):
 		token = np.zeros((MAX_NB_WORDS))
@@ -93,14 +93,16 @@ class TFDataHolder:
 
 	def get_full_data(self):
 		print 'building full Y data'
-		return self.Q_data, self.P_data, self.build_full_A_data(), self.build_start_token()
+		return self.Q_data, self.P_data, self.A_data, self.build_start_token()
 
 if __name__ == "__main__":
 	print 'Lets check out data set'
 	data_module = TFDataHolder('train')
-	print 'Length of Q_data:', len(data_module.Q_data)
-	print 'Length of P_data', len(data_module.P_data)
-	print 'Length of A_data', len(data_module.A_data)
+	print 'Length of Q_data:', data_module.Q_data.shape
+	print 'Length of P_data', data_module.P_data.shape
+	print 'Length of A_data', data_module.A_data.shape
+	print 'Lenth of A_data one hot', data_module.build_full_A_data().shape
+	print 'Length of Start Token', data_module.build_start_token()
 	print 'Data Size', data_module.data_size
 
 
