@@ -155,8 +155,8 @@ if __name__ == "__main__":
         init = tf.global_variables_initializer()
         print 'initialzed variables'
         config = tf.ConfigProto()
-        config.gpu_options.allow_growth=True
-        config.gpu_options.per_process_gpu_memory_fraction = 0.4
+        # config.gpu_options.allow_growth=True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
             session.run(init)
             print 'ran init, fitting.....'
