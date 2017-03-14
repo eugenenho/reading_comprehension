@@ -43,7 +43,7 @@ class EmbeddingHolder(object):
 		np.save(EMBEDDING_MAT_DIR, self.embedding_matrix)
 
 	def get_embeddings_mat(self):
-		return self.embedding_matrix
+		return self.embedding_matrix.astype(np.float32)
 		
 
 

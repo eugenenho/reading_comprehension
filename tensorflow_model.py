@@ -16,9 +16,9 @@ class TFModel():
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
         """
-        self.questions_placeholder = tf.placeholder(tf.int64, shape=(None, QUESTION_MAX_LENGTH), name="questions")
-        self.passages_placeholder = tf.placeholder(tf.int64, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
-        self.answers_placeholder = tf.placeholder(tf.int64, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
+        self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
+        self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
+        self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH, MAX_NB_WORDS), name="answers")
 
     def create_feed_dict(self, questions_batch, passages_batch, answers_batch=None):
         """Creates the feed_dict for the model.
@@ -41,22 +41,29 @@ class TFModel():
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
+        with tf.variable_scope("question"):
+            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            q_outputs, q_state_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32)
 
-        q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        b_q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        encoded_questions = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float64)
+        with tf.variable_scope("passage"):
+            p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32)
 
-        # p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        # encoded_passages = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float64)
-        # print 'passages', encoded_passages
-        
-        # encoded_info = tf.concat(encoded_questions[0], encoded_passages[0])
-        # print 'info', encoded_info
+        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_hidden = tf.concat(2, [q_last, p_last])
 
-        # preds = tf.nn.ctc_beam_search_decoder(inputs, sequence_length, beam_width=100, top_paths=1, merge_repeated=True)
-        
-        preds = encoded_questions[0]
-        return preds
+        with tf.variable_scope("decode"):
+            U = tf.get_variable('U', shape=(2 * HIDDEN_DIM, MAX_NB_WORDS * OUTPUT_MAX_LENGTH), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+            b = tf.get_variable('b', shape=(MAX_NB_WORDS*OUTPUT_MAX_LENGTH, ), dtype=tf.float32)
+            
+            q_p_hidden = tf.reshape(q_p_hidden, [-1, 2 * HIDDEN_DIM])
+            
+            output = tf.reshape(tf.matmul(q_p_hidden, U) + b, [OUTPUT_MAX_LENGTH, -1, MAX_NB_WORDS])
+            print output
+
+            preds = tf.nn.ctc_beam_search_decoder(output, OUTPUT_MAX_LENGTH, beam_width=100, top_paths=1, merge_repeated=True)
+        return 'preds'
 
     def add_loss_op(self, preds):
         y = self.answers_placeholder   

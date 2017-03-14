@@ -25,6 +25,10 @@ class TFDataHolder:
 			self.P_data = self.build_P_data()
 			self.A_data = self.build_A_data() 
 
+		self.Q_data = self.Q_data.astype(np.float32)
+		self.P_data = self.P_data.astype(np.float32)
+		self.A_data = self.A_data.astype(np.float32)
+
 		self.data_size = self.Q_data.shape[0]
 
 	# This constructs the data from the pickled objects
@@ -79,7 +83,7 @@ class TFDataHolder:
 		return A_data_indexes
 
 	def build_full_A_data(self):
-		enc = OneHotEncoder()
+		enc = OneHotEncoder(dtype=np.float32)
 		return enc.fit_transform(self.A_data)
 
 	def get_full_data(self):
