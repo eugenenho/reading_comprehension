@@ -95,6 +95,14 @@ class TFDataHolder:
 		print 'building full Y data'
 		return self.Q_data, self.P_data, self.build_full_A_data(), self.build_start_token()
 
+if __name__ == "__main__":
+	print 'Lets check out data set'
+	data_module = TFDataHolder('train')
+	print 'Length of Q_data:', len(data_module.Q_data)
+	print 'Length of P_data', len(data_module.P_data)
+	print 'Length of A_data', len(data_module.A_data)
+	print 'Data Size', data_module.data_size
+
 
 
 
