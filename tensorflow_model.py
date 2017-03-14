@@ -55,7 +55,7 @@ class TFModel():
 
         # preds = tf.nn.ctc_beam_search_decoder(inputs, sequence_length, beam_width=100, top_paths=1, merge_repeated=True)
         
-        preds = encoded_questions[1]
+        preds = encoded_questions[0]
         return preds
 
     def add_loss_op(self, preds):
@@ -72,7 +72,7 @@ class TFModel():
     def train_on_batch(self, sess, questions_batch, passages_batch, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
         feed = self.create_feed_dict(questions_batch, passages_batch, answers_batch=answers_batch)
-        _, loss, _ = sess.run([self.train_op, self.loss], feed_dict=feed)
+        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         print 'loss:', loss
         return loss
 
