@@ -15,7 +15,7 @@ MAX_NB_WORDS = 228999
 EMBEDDING_DIM = 300
 
 # model params
-HIDDEN_DIM = 300
+HIDDEN_DIM = 50
 DEPTH = 1
 
 # directories

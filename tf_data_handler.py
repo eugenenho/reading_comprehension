@@ -101,7 +101,7 @@ if __name__ == "__main__":
 	print 'Length of Q_data:', data_module.Q_data.shape
 	print 'Length of P_data', data_module.P_data.shape
 	print 'Length of A_data', data_module.A_data.shape
-	print 'Lenth of A_data one hot', data_module.build_full_A_data().shape
+	# print 'Lenth of A_data one hot', data_module.build_full_A_data().shape
 	print 'Length of Start Token', data_module.build_start_token()
 	print 'Data Size', data_module.data_size
 

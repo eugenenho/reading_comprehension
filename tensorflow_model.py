@@ -10,7 +10,7 @@ from embeddings_handler import EmbeddingHolder
 
 from simple_configs import NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
-# MASKING AND DROPOUT!!!
+# MASKING AND DROPOUT!!!, and save as we go, and data memory handling
 class TFModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -138,7 +138,7 @@ class TFModel():
             start += batch_size
             end = min( start + batch_size, len(q_data) )
 
-            if start >= 10000: break
+            if start >= 1000: break
 
         print 'split batches done, and took', time.time() - time_start, 'seconds'
         return batches
