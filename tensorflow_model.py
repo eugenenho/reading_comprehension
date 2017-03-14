@@ -111,6 +111,7 @@ class TFModel():
         i = 0
         batch = data.get_batch()
         while batch is not None:
+            print 'i', i, 'target:', data.data_size / TRAIN_BATCH_SIZE
             q_batch = batch[0]
             p_batch = batch[1]
             a_batch = batch[2]
@@ -121,16 +122,18 @@ class TFModel():
 
             prog.update(i + 1, [("train loss", loss)])
 
+            batch = data.get_batch()
             i += 1
-
+        print 'done with epoc'
         return losses
 
-    def fit(self, sess, data):
+    def fit(self, sess, saver, data):
         losses = []
         for epoch in range(NUM_EPOCS):
             print "Epoch:", epoch + 1, "out of", NUM_EPOCS
             loss = self.run_epoch(sess, data)
             losses.append(loss)
+            saver.save(sess, '.model.weights')
         return losses
 
     def build(self):
@@ -153,14 +156,15 @@ if __name__ == "__main__":
         print "took", time.time() - start, "seconds"
 
         init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
         print 'initialzed variables'
         config = tf.ConfigProto()
         # config.gpu_options.allow_growth=True
-        config.gpu_options.per_process_gpu_memory_fraction = 0.6
+        # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
             session.run(init)
             print 'ran init, fitting.....'
-            losses = model.fit(session, data)
+            losses = model.fit(session, saver, data)
 
     print 'losses list:', losses
 
