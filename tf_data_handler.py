@@ -25,7 +25,7 @@ class TFDataHolder:
 			self.P_data = self.build_P_data()
 			self.A_data = self.build_A_data() 
 
-		self.data_size = 200#self.Q_data.shape[0]
+		self.data_size = self.Q_data.shape[0]
 		self.Q_data = self.Q_data[:self.data_size]
 		self.P_data = self.P_data[:self.data_size]
 		self.A_data = self.A_data[:self.data_size]

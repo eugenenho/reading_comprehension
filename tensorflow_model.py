@@ -110,7 +110,6 @@ class TFModel():
         i = 0
         batch = data.get_batch()
         while batch is not None:
-            print 'i', i, 'target:', data.data_size / TRAIN_BATCH_SIZE
             q_batch = batch[0]
             p_batch = batch[1]
             a_batch = batch[2]
@@ -123,7 +122,6 @@ class TFModel():
 
             batch = data.get_batch()
             i += 1
-        print 'done with epoc'
         return losses
 
     def fit(self, sess, saver, data):
