@@ -12,10 +12,10 @@ OUTPUT_MAX_LENGTH = 25
 
 # Embedding params
 MAX_NB_WORDS = 228999
-EMBEDDING_DIM = 300
+EMBEDDING_DIM = 50
 
 # model params
-HIDDEN_DIM = 50
+HIDDEN_DIM = 10
 DEPTH = 1
 
 # directories
@@ -23,3 +23,4 @@ GLOVE_DIR = './download/dwr/'
 TEXT_DATA_DIR = './data/marco/vocab.dat'
 EMBEDDING_MAT_DIR = './data/marco/embeddings' + str(EMBEDDING_DIM) + '.npy'
 SAVE_MODEL_DIR = './baseline_model'
+LOG_FILE_DIR = './log.txt'

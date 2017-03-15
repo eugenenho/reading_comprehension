@@ -8,7 +8,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 
-from simple_configs import NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
+from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
 class TFModel():
@@ -20,15 +20,17 @@ class TFModel():
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
         self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
+        self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None):
+    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None, dropout=0.5):
         """Creates the feed_dict for the model.
         NOTE: You do not have to do anything here.
         """
         feed_dict = {
             self.questions_placeholder : questions_batch,
             self.passages_placeholder : passages_batch,
-            self.start_token_placeholder : start_token_batch
+            self.start_token_placeholder : start_token_batch,
+            self.dropout_placeholder : dropout
         }
         if answers_batch is not None: feed_dict[self.answers_placeholder] = answers_batch
         return feed_dict
@@ -61,7 +63,7 @@ class TFModel():
             d_cell = tf.nn.rnn_cell.LSTMCell(2*HIDDEN_DIM) # Make decoder cell with hidden dim
 
             # Make starter token input
-            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, 1, MAX_NB_WORDS]
+            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
             
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_hidden, [-1, 2*HIDDEN_DIM]) # hidden state from passage and question
@@ -73,12 +75,9 @@ class TFModel():
 
                 U = tf.get_variable('U', shape=(2 * HIDDEN_DIM, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
                 b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
-                o_t = tf.matmul(o_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
+                o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
+                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                # o_drop_t = tf.nn.dropout(h_t, self.dropout_placeholder)
-                # y_t = tf.matmul(o_drop_t, U) + b_2
-
-                y_t = o_t
                 inp = y_t
 
                 preds.append(y_t)
@@ -105,7 +104,7 @@ class TFModel():
         return loss
 
     def run_epoch(self, sess, data):
-        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE))
+        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         losses = list()
         i = 0
@@ -121,16 +120,21 @@ class TFModel():
 
             prog.update(i + 1, [("train loss", loss)])
 
+            batch = data.get_batch()
+            if i % 1200 == 0 and i > 0:
+                self.log.write('\nNow saving file...')
+                saver.save(sess, './data/model.weights')
+                self.log.write('\nSaved...')
             i += 1
-
         return losses
 
-    def fit(self, sess, data):
+    def fit(self, sess, saver, data):
         losses = []
         for epoch in range(NUM_EPOCS):
-            print "Epoch:", epoch + 1, "out of", NUM_EPOCS
+            self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
             loss = self.run_epoch(sess, data)
             losses.append(loss)
+            saver.save(sess, './data/model.weights')
         return losses
 
     def build(self):
@@ -141,29 +145,31 @@ class TFModel():
 
     def __init__(self, embeddings):
         self.pretrained_embeddings = embeddings
+        self.log = open(LOG_FILE_DIR, "a")
         self.build()
 
 if __name__ == "__main__":
+    print 'Starting, and now printing to log.txt'
     data = TFDataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
-        print "Building model..."
         start = time.time()
         model = TFModel(embeddings)
-        print "took", time.time() - start, "seconds"
+        model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
 
         init = tf.global_variables_initializer()
-        print 'initialzed variables'
+        saver = tf.train.Saver()
+        model.log.write('\ninitialzed variables')
         config = tf.ConfigProto()
         # config.gpu_options.allow_growth=True
-        config.gpu_options.per_process_gpu_memory_fraction = 0.6
+        # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
             session.run(init)
-            print 'ran init, fitting.....'
-            losses = model.fit(session, data)
+            model.log.write('\nran init, fitting.....')
+            losses = model.fit(session, saver, data)
 
-    print 'losses list:', losses
-
+    model.log.write('\nlosses list: ' + losses)
+    model.log.close()
 
 
 
