@@ -12,10 +12,10 @@ OUTPUT_MAX_LENGTH = 25
 
 # Embedding params
 MAX_NB_WORDS = 228999
-EMBEDDING_DIM = 300
+EMBEDDING_DIM = 50
 
 # model params
-HIDDEN_DIM = 50
+HIDDEN_DIM = 10
 DEPTH = 1
 
 # directories
