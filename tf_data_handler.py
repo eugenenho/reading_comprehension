@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import cPickle
+import h5py
 
 from sklearn.preprocessing import OneHotEncoder
-from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH
+from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_DATA_SIZE
 
 class TFDataHolder:
 
@@ -11,25 +13,21 @@ class TFDataHolder:
 		self.log = open(LOG_FILE_DIR, "a")
 		self.log.write('\n\n\n\ninitializing tf Data Holder')
 		self.data_set = str(DATA_SET).lower()
+		DATA_FILE = './data/marco/h5py' +  self.data_set
 
-		found = False
-		try:
-			self.Q_data = np.load("./data/marco/" + self.data_set + ".data.q_data.npy")
-			self.P_data = np.load("./data/marco/" + self.data_set + ".data.p_data.npy")
-			self.A_data = np.load("./data/marco/" + self.data_set + ".data.a_data.npy")
-			found = True
-		except Exception as e:
-			self.log.write('\ncould not find premade tf matrix. creating it...')
+		if not os.path.isfile(DATA_FILE):
+			h5f = h5py.File(DATA_FILE, 'w')
+			h5f.create_dataset('q_data', data=self.build_Q_data())			
+			h5f.create_dataset('p_data', data=self.build_P_data())			
+			h5f.create_dataset('a_data', data=self.build_A_data())
+			h5f.close()
 
-		if not found:
-			self.Q_data = self.build_Q_data()
-			self.P_data = self.build_P_data()
-			self.A_data = self.build_A_data() 
+		h5f = h5py.File(DATA_FILE,'r')
+		self.Q_data = h5f['q_data']
+		self.P_data = h5f['p_data']
+		self.A_data = h5f['a_data']
+		self.data_size = self.Q_data.shape[0] if MAX_DATA_SIZE == -1 else MAX_DATA_SIZE
 
-		self.data_size = self.Q_data.shape[0]
-		self.Q_data = self.Q_data[:self.data_size]
-		self.P_data = self.P_data[:self.data_size]
-		self.A_data = self.A_data[:self.data_size]
 		self.start_token = self.build_start_token()
 
 		self.start_iter = 0
@@ -115,19 +113,19 @@ class TFDataHolder:
 
 if __name__ == "__main__":
 	data_module = TFDataHolder('train')
-	data_module.log.write('\nLets check out data set')
-	data_module.log.write('\nLength of Q_data: ' + str(data_module.Q_data.shape))
-	data_module.log.write('\nLength of P_data ' + str(data_module.P_data.shape))
-	data_module.log.write('\nLength of A_data ' + str(data_module.A_data.shape))
-	data_module.log.write('\nLength of Start Token ' + str(data_module.start_token.shape))
-	data_module.log.write('\nData Size ' + str(data_module.data_size))
+	print '\nLets check out data set'
+	print '\nLength of Q_data: ' + str(data_module.Q_data.shape)
+	print '\nLength of P_data ' + str(data_module.P_data.shape)
+	print '\nLength of A_data ' + str(data_module.A_data.shape)
+	print '\nLength of Start Token ' + str(data_module.start_token.shape)
+	print '\nData Size ' + str(data_module.data_size)
 
-	data_module.log.write('\nMaking batch')
+	print '\nMaking batch'
 	batch = data_module.get_batch()
-	data_module.log.write('\nBatch Q ' + str(batch[0].shape))
-	data_module.log.write('\nBatch P ' + str(batch[1].shape))
-	data_module.log.write('\nBatch A ' + str(batch[2].shape))
-	data_module.log.write('\nBatch ST ' + str(batch[3].shape))
+	print '\nBatch Q ' + str(batch[0].shape)
+	print '\nBatch P ' + str(batch[1].shape)
+	print '\nBatch A ' + str(batch[2].shape)
+	print '\nBatch ST ' + str(batch[3].shape)
 
 
 
