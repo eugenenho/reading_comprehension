@@ -39,8 +39,12 @@ class TFModel():
         embed_vals = tf.Variable(self.pretrained_embeddings)
         embeddings = tf.nn.embedding_lookup(embed_vals, placeholder)
         return embeddings
-        # embeddings = tf.reshape(embeddings, [-1, self.config.n_features * self.config.embed_size])
-        # return embeddings
+
+    def seq_length(self, sequence):
+        used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))
+        length = tf.reduce_sum(used, reduction_indices=1)
+        length = tf.cast(length, tf.int32)
+        return length
 
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
@@ -48,11 +52,11 @@ class TFModel():
 
         with tf.variable_scope("question"):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            q_outputs, q_state_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32)
+            q_outputs, q_state_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(questions))
 
         with tf.variable_scope("passage"):
             p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32)
+            p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
 
         q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
         p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
@@ -90,18 +94,20 @@ class TFModel():
 
     def add_loss_op(self, preds):
         y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
+        
         # CREATE MASKS HERE
-        # get arg max of each 3rd dim
-        # mask everything after [2]
-        # index_maxs = tf.argmax(preds, 2)
-        # stop_tokens = tf.where(tf.equal(index_maxs, 2), x=1, y=0)
-        # stop_token_index = tf.argmax(stop_tokens, 0)
+        index_maxs = tf.argmax(preds, 2)
+        check = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + 2
+        stop_tokens = tf.to_int32( tf.equal(index_maxs, check) )
+        stop_token_index = tf.to_int32( tf.argmax(stop_tokens, 1) + 1 )
+        masks = tf.sequence_mask(stop_token_index, OUTPUT_MAX_LENGTH)
 
-        # masks = tf.where(tf.equal(tf.reduce_sum(tf.slice()), stop_token_index), x=False, y=True)
+        loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
 
-        loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
-        # APPLY MASKS HERE
-        loss = tf.reduce_mean(loss_mat)
+        # apply masks
+        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
+
+        loss = tf.reduce_mean(masked_loss_mat)
         return loss
 
     def add_training_op(self, loss):        
