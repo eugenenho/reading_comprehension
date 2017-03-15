@@ -31,11 +31,11 @@ class EmbeddingHolder(object):
 		for i, line in enumerate(f):
 			word = line.lower().strip()
 			word_index[word] = i if word not in word_index else word_index[word]
-		size_of_mat = i + 1
 
 		# prepare embedding matrix
-		self.embedding_matrix = np.zeros((size_of_mat, EMBEDDING_DIM))
+		self.embedding_matrix = np.zeros((MAX_NB_WORDS, EMBEDDING_DIM))
 		for word, i in word_index.iteritems():
+			if i >= MAX_NB_WORDS: continue
 			embedding_vector = embeddings_index[word]
 			if embedding_vector is not None:
 				self.embedding_matrix[i] = embedding_vector
