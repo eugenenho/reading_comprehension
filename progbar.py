@@ -11,7 +11,7 @@ class Progbar(object):
         interval: Minimum visual progress update interval (in seconds).
     """
 
-    def __init__(self, target, width=30, verbose=1):
+    def __init__(self, target, width=30, verbose=1, file_given=None):
         self.width = width
         self.target = target
         self.sum_values = {}
@@ -20,6 +20,7 @@ class Progbar(object):
         self.total_width = 0
         self.seen_so_far = 0
         self.verbose = verbose
+        self.out = sys.stdout if file_given is None else file_given
 
     def update(self, current, values=[], exact=[]):
         """
@@ -48,8 +49,8 @@ class Progbar(object):
         now = time.time()
         if self.verbose == 1:
             prev_total_width = self.total_width
-            sys.stdout.write("\b" * prev_total_width)
-            sys.stdout.write("\r")
+            self.out.write("\b" * prev_total_width)
+            self.out.write("\r")
 
             numdigits = int(np.floor(np.log10(self.target))) + 1
             barstr = '%%%dd/%%%dd [' % (numdigits, numdigits)
@@ -64,7 +65,7 @@ class Progbar(object):
                     bar += '='
             bar += ('.'*(self.width-prog_width))
             bar += ']'
-            sys.stdout.write(bar)
+            self.out.write(bar)
             self.total_width = len(bar)
 
             if current:
@@ -87,18 +88,18 @@ class Progbar(object):
             if prev_total_width > self.total_width:
                 info += ((prev_total_width-self.total_width) * " ")
 
-            sys.stdout.write(info)
-            sys.stdout.flush()
+            self.out.write(info)
+            self.out.flush()
 
             if current >= self.target:
-                sys.stdout.write("\n")
+                self.out.write("\n")
 
         if self.verbose == 2:
             if current >= self.target:
                 info = '%ds' % (now - self.start)
                 for k in self.unique_values:
                     info += ' - %s: %.4f' % (k, self.sum_values[k][0] / max(1, self.sum_values[k][1]))
-                sys.stdout.write(info + "\n")
+                self.out.write(info + "\n")
 
     def add(self, n, values=[]):
         self.update(self.seen_so_far+n, values)
