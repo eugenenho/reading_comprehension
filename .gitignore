@@ -3,4 +3,5 @@
 /download
 model_save
 baseline_model
-*.pyc 
+*.pyc
+model.weights.data-00000-of-00001
