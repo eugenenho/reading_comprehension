@@ -43,7 +43,7 @@ class TFDataHolder:
 		for i, question in enumerate(questions_list):
 			# padding
 			if len(question) < QUESTION_MAX_LENGTH:
-				question.extend([MAX_NB_WORDS - 1] + [0] * (QUESTION_MAX_LENGTH - len(question) - 1) )
+				question = [0] * (QUESTION_MAX_LENGTH - len(question)) + question
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
 		np.save("./data/marco/" + self.data_set + ".data.q_data", Q_data)

@@ -1,0 +1,19 @@
+
+
+
+
+initializing tf Data Holder
+could not find premade tf matrix. creating it...
+built q data
+Build graph took 12.8923430443 seconds
+initialzed variables
+ran init, fitting.....
+Epoch: 1 out of 10   1/2316 [..............................] - ETA: 51720s - train loss: 12.1703   2/2316 [..............................] - ETA: 47753s - train loss: 12.1115   3/2316 [..............................] - ETA: 46836s - train loss: 12.1683
+
+
+
+initializing tf Data Holder
+could not find premade tf matrix. creating it...
+built q data
+built p data
+built y data
