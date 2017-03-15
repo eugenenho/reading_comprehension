@@ -8,7 +8,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 
-from simple_configs import NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
+from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, INPUT_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
 class TFModel():
@@ -45,6 +45,7 @@ class TFModel():
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
+
         with tf.variable_scope("question"):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
             q_outputs, q_state_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32)
@@ -89,7 +90,17 @@ class TFModel():
 
     def add_loss_op(self, preds):
         y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
+        # CREATE MASKS HERE
+        # get arg max of each 3rd dim
+        # mask everything after [2]
+        # index_maxs = tf.argmax(preds, 2)
+        # stop_tokens = tf.where(tf.equal(index_maxs, 2), x=1, y=0)
+        # stop_token_index = tf.argmax(stop_tokens, 0)
+
+        # masks = tf.where(tf.equal(tf.reduce_sum(tf.slice()), stop_token_index), x=False, y=True)
+
         loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
+        # APPLY MASKS HERE
         loss = tf.reduce_mean(loss_mat)
         return loss
 
@@ -104,7 +115,7 @@ class TFModel():
         return loss
 
     def run_epoch(self, sess, data):
-        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE))
+        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         losses = list()
         i = 0
@@ -122,17 +133,19 @@ class TFModel():
 
             batch = data.get_batch()
             if i % 1200 == 0 and i > 0:
-                saver.save(sess, '/data/model.weights')
+                self.log.write('\nNow saving file...')
+                saver.save(sess, './data/model.weights')
+                self.log.write('\nSaved...')
             i += 1
         return losses
 
     def fit(self, sess, saver, data):
         losses = []
         for epoch in range(NUM_EPOCS):
-            print "Epoch:", epoch + 1, "out of", NUM_EPOCS
+            self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
             loss = self.run_epoch(sess, data)
             losses.append(loss)
-            saver.save(sess, '/data/model.weights')
+            saver.save(sess, './data/model.weights')
         return losses
 
     def build(self):
@@ -143,30 +156,31 @@ class TFModel():
 
     def __init__(self, embeddings):
         self.pretrained_embeddings = embeddings
+        self.log = open(LOG_FILE_DIR, "a")
         self.build()
 
 if __name__ == "__main__":
+    print 'Starting, and now printing to log.txt'
     data = TFDataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
-        print "Building model..."
         start = time.time()
         model = TFModel(embeddings)
-        print "took", time.time() - start, "seconds"
+        model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
 
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
-        print 'initialzed variables'
+        model.log.write('\ninitialzed variables')
         config = tf.ConfigProto()
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
             session.run(init)
-            print 'ran init, fitting.....'
+            model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
 
-    print 'losses list:', losses
-
+    model.log.write('\nlosses list: ' + losses)
+    model.log.close()
 
 
 
