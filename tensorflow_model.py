@@ -63,7 +63,7 @@ class TFModel():
             d_cell = tf.nn.rnn_cell.LSTMCell(2*HIDDEN_DIM) # Make decoder cell with hidden dim
 
             # Make starter token input
-            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, 1, MAX_NB_WORDS]
+            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
             
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_hidden, [-1, 2*HIDDEN_DIM]) # hidden state from passage and question
@@ -121,6 +121,8 @@ class TFModel():
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_batch()
+            if i % 1200 == 0 and i > 0:
+                saver.save(sess, '/data/model.weights')
             i += 1
         return losses
 
@@ -130,7 +132,7 @@ class TFModel():
             print "Epoch:", epoch + 1, "out of", NUM_EPOCS
             loss = self.run_epoch(sess, data)
             losses.append(loss)
-            saver.save(sess, '.model.weights')
+            saver.save(sess, '/data/model.weights')
         return losses
 
     def build(self):

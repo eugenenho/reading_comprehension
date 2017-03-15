@@ -75,7 +75,8 @@ class TFDataHolder:
 			# weird thing here, the answer is stores as a list of lists
 			ans = ans[0] if len(ans) >= 1 else []
 			# pad / truncate values
-			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [0] * (OUTPUT_MAX_LENGTH - len(ans)) )
+			pad_len = OUTPUT_MAX_LENGTH - len(ans)
+			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [0] * pad_len )
 			# add to matrix
 			A_data_indexes[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
 
