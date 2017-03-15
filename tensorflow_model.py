@@ -45,6 +45,7 @@ class TFModel():
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
+
         with tf.variable_scope("question"):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
             q_outputs, q_state_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32)
@@ -89,7 +90,17 @@ class TFModel():
 
     def add_loss_op(self, preds):
         y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
+        # CREATE MASKS HERE
+        # get arg max of each 3rd dim
+        # mask everything after [2]
+        # index_maxs = tf.argmax(preds, 2)
+        # stop_tokens = tf.where(tf.equal(index_maxs, 2), x=1, y=0)
+        # stop_token_index = tf.argmax(stop_tokens, 0)
+
+        # masks = tf.where(tf.equal(tf.reduce_sum(tf.slice()), stop_token_index), x=False, y=True)
+
         loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
+        # APPLY MASKS HERE
         loss = tf.reduce_mean(loss_mat)
         return loss
 
