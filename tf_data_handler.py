@@ -44,6 +44,7 @@ class TFDataHolder:
 				question = [0] * (QUESTION_MAX_LENGTH - len(question)) + question
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
+		Q_data = np.where(Q_data < MAX_NB_WORDS, Q_data, 2)
 		np.save("./data/marco/" + self.data_set + ".data.q_data", Q_data)
 
 		self.log.write('\nbuilt q data')
@@ -60,7 +61,7 @@ class TFDataHolder:
 					passage.extend([0] * (PASSAGE_MAX_LENGTH - len(passage)) )
 
 				P_data[i] = np.array(passage[:PASSAGE_MAX_LENGTH])
-
+		P_data = np.where(P_data < MAX_NB_WORDS, P_data, 2)
 		np.save("./data/marco/" + self.data_set + ".data.p_data", P_data)
 
 		self.log.write('\nbuilt p data')
@@ -69,21 +70,21 @@ class TFDataHolder:
 
 	def build_A_data(self):
 		answers_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.answer.pkl","rb" ))
-		A_data_indexes = np.zeros((self.data_size, OUTPUT_MAX_LENGTH))
+		A_data = np.zeros((self.data_size, OUTPUT_MAX_LENGTH))
 		for i, ans in enumerate(answers_list):
 			# weird thing here, the answer is stores as a list of lists
 			ans = ans[0] if len(ans) >= 1 else []
 			# pad / truncate values
-			pad_len = OUTPUT_MAX_LENGTH - len(ans)
-			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [0] * pad_len )
+			pad_len = OUTPUT_MAX_LENGTH - len(ans) - 1
+			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [1] + [0] * pad_len )
 			# add to matrix
-			A_data_indexes[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
+			A_data[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
 
-		A_data_indexes = A_data_indexes.astype(int)
-		np.save("./data/marco/" + self.data_set + ".data.a_data", A_data_indexes)
+		A_data = np.where(A_data < MAX_NB_WORDS, A_data, 2)
+		np.save("./data/marco/" + self.data_set + ".data.a_data", A_data)
 
 		self.log.write('\nbuilt y data')
-		return A_data_indexes
+		return A_data
 
 
 	def build_start_token(self):
