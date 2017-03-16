@@ -9,11 +9,11 @@ from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, OUTPUT_MAX_LENGTH, MA
 class TFDataHolder:
 
 	# pass in data_set ('train', 'val', 'dev')
-	def __init__(self, DATA_SET):
+	def __init__(self, DATA_SET, batch_size=TRAIN_BATCH_SIZE):
 		self.log = open(LOG_FILE_DIR, "a")
 		self.log.write('\n\n\n\ninitializing tf Data Holder')
 		self.data_set = str(DATA_SET).lower()
-		DATA_FILE = './data/marco/h5py' +  self.data_set
+		DATA_FILE = './data/marco/h5py-' +  self.data_set
 
 		if not os.path.isfile(DATA_FILE):
 			h5f = h5py.File(DATA_FILE, 'w')
@@ -28,7 +28,7 @@ class TFDataHolder:
 		self.A_data = h5f['a_data']
 		self.data_size = self.Q_data.shape[0] if MAX_DATA_SIZE == -1 else MAX_DATA_SIZE
 
-		self.start_token = self.build_start_token()
+		self.start_token = self.build_start_token(batch_size)
 
 		self.start_iter = 0
 
@@ -39,9 +39,11 @@ class TFDataHolder:
 		self.data_size = len(questions_list)
 		Q_data = np.zeros((self.data_size, QUESTION_MAX_LENGTH))
 		for i, question in enumerate(questions_list):
+
 			# padding
 			if len(question) < QUESTION_MAX_LENGTH:
-				question = [0] * (QUESTION_MAX_LENGTH - len(question)) + question
+				pad = [0] * (QUESTION_MAX_LENGTH - len(question))
+				question.extend(pad)
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
 		Q_data = np.where(Q_data < MAX_NB_WORDS, Q_data, 2)
@@ -87,8 +89,8 @@ class TFDataHolder:
 		return A_data
 
 
-	def build_start_token(self):
-		token_mat = np.zeros((TRAIN_BATCH_SIZE, MAX_NB_WORDS))
+	def build_start_token(self, batch_size=TRAIN_BATCH_SIZE):
+		token_mat = np.zeros((batch_size, MAX_NB_WORDS))
 		for row in token_mat:
 			row[1] = 1
 		return token_mat
@@ -97,11 +99,11 @@ class TFDataHolder:
 		self.log.write('\nbuilding full Y data')
 		return self.Q_data, self.P_data, self.A_data, self.start_token
 
-	def get_batch(self):
+	def get_batch(self, batch_size=TRAIN_BATCH_SIZE):
 		if self.start_iter >= self.data_size:
 			self.start_iter = 0
 			return None
-		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
+		end = min(self.data_size, self.start_iter + batch_size)
 		batch_size = end - self.start_iter
 		to_return = (
 				self.Q_data[self.start_iter:end], 
@@ -109,24 +111,24 @@ class TFDataHolder:
 				self.A_data[self.start_iter:end], 
 				self.start_token[:batch_size]
 				)
-		self.start_iter += TRAIN_BATCH_SIZE
+		self.start_iter += batch_size
 		return to_return
 
 if __name__ == "__main__":
 	data_module = TFDataHolder('train')
-	print '\nLets check out data set'
-	print '\nLength of Q_data: ' + str(data_module.Q_data.shape)
-	print '\nLength of P_data ' + str(data_module.P_data.shape)
-	print '\nLength of A_data ' + str(data_module.A_data.shape)
-	print '\nLength of Start Token ' + str(data_module.start_token.shape)
-	print '\nData Size ' + str(data_module.data_size)
+	print 'Lets check out data set'
+	print 'Length of Q_data: ', data_module.Q_data.shape
+	print 'Length of P_data ', data_module.P_data.shape
+	print 'Length of A_data ', data_module.A_data.shape
+	print 'Length of Start Token ', data_module.start_token.shape
+	print 'Data Size ', data_module.data_size
 
-	print '\nMaking batch'
+	print 'Making batch'
 	batch = data_module.get_batch()
-	print '\nBatch Q ' + str(batch[0].shape)
-	print '\nBatch P ' + str(batch[1].shape)
-	print '\nBatch A ' + str(batch[2].shape)
-	print '\nBatch ST ' + str(batch[3].shape)
+	print 'Batch Q ', batch[0].shape
+	print 'Batch P ', batch[1].shape
+	print 'Batch A ', batch[2].shape
+	print 'Batch ST ', batch[3].shape
 
 
 
