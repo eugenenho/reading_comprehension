@@ -14,7 +14,7 @@ OUTPUT_MAX_LENGTH = 15
 # Embedding params
 MAX_NB_WORDS = 50000#228999 #MAX VALUE
 EMBEDDING_DIM = 300
-MAX_DATA_SIZE = 127 #-1 to set no limit on data size
+MAX_DATA_SIZE = -1 #-1 to set no limit on data size
 
 # model params
 HIDDEN_DIM = 100
