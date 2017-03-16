@@ -106,9 +106,9 @@ class TFDataHolder:
 		end = min(self.data_size, self.start_iter + batch_size)
 		batch_size = end - self.start_iter
 		to_return = (
-				self.Q_data[0:batch_size] #[self.start_iter:end], 
-				self.P_data[0:batch_size] #[self.start_iter:end], 
-				self.A_data[0:batch_size] #[self.start_iter:end], 
+				self.Q_data[0:batch_size], #[self.start_iter:end], 
+				self.P_data[0:batch_size], #[self.start_iter:end], 
+				self.A_data[0:batch_size], #[self.start_iter:end], 
 				self.start_token[:batch_size]
 				)
 		self.start_iter += batch_size
