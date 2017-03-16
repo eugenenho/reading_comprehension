@@ -1,25 +1,0 @@
-
-Build graph took 6.85863900185 seconds
-Starting to restore
-ran rebuild, ready to predict1/2 [==============>...............] - ETA: 6s - Predictions going...: 1.00002/2 [==============================] - 10s - Predictions going...: 1.0000    
-
-
-
-
-initializing tf Data Holder
-Build graph took 6.15856719017 seconds
-Starting to restore
-ran rebuild, ready to predict1/2 [==============>...............] - ETA: 5s - Predictions going...: 1.00002/2 [==============================] - 9s - Predictions going...: 1.0000     
-
-
-
-
-initializing tf Data Holder
-Build graph took 6.4828979969 seconds
-Starting to restore
-ran rebuild, ready to predict1/2 [==============>...............] - ETA: 5s - Predictions going...: 1.00002/2 [==============================] - 9s - Predictions going...: 1.0000     
-
-
-
-
-initializing tf Data Holder
