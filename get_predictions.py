@@ -1,8 +1,8 @@
 import json
 import time
 import tensorflow as tf
-from tensorflow_model_attn import TFAttnModel
-from tensorflow_model import TFModel
+# from tensorflow_model_attn import TFAttnModel
+from tensorflow_model_attn import TFModel as TFAttnModel
 
 from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
@@ -17,8 +17,7 @@ def get_predictions(data, embeddings):
 	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
 	with tf.Graph().as_default():
 			start = time.time()
-			# model = TFModel(embeddings)
-			model = TFAttnModel(embeddings)
+			model = TFModel(embeddings)
 			print "\nRebuild graph took " + str(time.time() - start) + " seconds"
 			init = tf.global_variables_initializer()
 			with tf.Session() as session:

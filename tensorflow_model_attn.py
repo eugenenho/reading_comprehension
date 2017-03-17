@@ -191,7 +191,6 @@ if __name__ == "__main__":
     embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
         start = time.time()
-        model = TFAttnModel(embeddings)
         model = TFModel(embeddings)
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
 
