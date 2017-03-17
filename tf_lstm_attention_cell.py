@@ -17,6 +17,8 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 	def __call__(self, inputs, state, scope = None):
 		lstm_out, lstm_state = super(LSTMAttnCell, self).__call__(inputs, state, scope)
+		original_h, original_c = lstm_state
+
 
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
@@ -40,7 +42,9 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, lstm_out], self._num_units, True, 1.0))
-		return (out, out)
+		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(out, original_c)
+		return (out, output_tuple)
+
 
 
 
