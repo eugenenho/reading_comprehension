@@ -12,6 +12,7 @@ from tf_lstm_attention_cell import LSTMAttnCell
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
+
 class TFModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -65,7 +66,6 @@ class TFModel():
         # Passage encoder
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(passages), q_outputs)
 
-
         # with tf.variable_scope("passage"):
         #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
         #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
@@ -102,7 +102,8 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                inp = y_t
+                imp = tf.argmax(y_t, 1)
+                imp = tf.nn.embedding_lookup(self.pretrained_embeddings, imp)
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()

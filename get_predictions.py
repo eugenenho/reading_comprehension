@@ -1,7 +1,8 @@
 import json
 import time
 import tensorflow as tf
-from tensorflow_model import TFModel
+# from tensorflow_model_attn import TFAttnModel
+from tensorflow_model_attn import TFModel
 
 from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
@@ -10,7 +11,7 @@ from embeddings_handler import EmbeddingHolder
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, PRED_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 DATA_SET = 'train'
-MODEL_PATH = './data/Models/mid_train/model.weights'
+MODEL_PATH = './data/model.weights'
 
 def get_predictions(data, embeddings):
 	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
