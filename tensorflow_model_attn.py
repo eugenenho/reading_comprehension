@@ -12,7 +12,7 @@ from tf_lstm_attention_cell import LSTMAttnCell
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
-class TFModel():
+class TFAttnModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
         start = time.time()
-        model = TFModel(embeddings)
+        model = TFAttnModel(embeddings)
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
 
         init = tf.global_variables_initializer()
