@@ -120,7 +120,7 @@ class TFModel():
         stop_token_index = tf.to_int32( tf.argmax(stop_tokens, 1) + 1 )
         masks = tf.sequence_mask(stop_token_index, OUTPUT_MAX_LENGTH)
 
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits (preds, y)
+        loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
         #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
 
         # apply masks
