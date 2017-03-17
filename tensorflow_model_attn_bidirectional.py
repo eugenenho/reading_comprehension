@@ -51,7 +51,7 @@ class TFModel():
         self.attn_cell_fw = LSTMAttnCell(HIDDEN_DIM, prev_states_fw)
         self.attn_cell_bw = LSTMAttnCell(HIDDEN_DIM, prev_states_bw)
         with tf.variable_scope(scope, reuse):
-            output_tuple, final_state = tf.nn.bidirectional_dynamic_rnn(self.attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
+            output_tuple, final_state = tf.nn.bidirectional_dynamic_rnn(self.attn_cell_fw, self.attn_cell_bw, inputs, dtype=tf.float32, sequence_length=mask)
         return (output_tuple, final_state) 
 
     def add_prediction_op(self): 
