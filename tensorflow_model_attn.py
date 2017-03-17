@@ -65,6 +65,7 @@ class TFModel():
         # Passage encoder
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(passages), q_outputs)
 
+
         # with tf.variable_scope("passage"):
         #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
         #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
@@ -121,7 +122,6 @@ class TFModel():
         masks = tf.sequence_mask(stop_token_index, OUTPUT_MAX_LENGTH)
 
         loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
-        #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
 
         # apply masks
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
