@@ -12,7 +12,6 @@ from tf_lstm_attention_cell import LSTMAttnCell
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
-
 class TFModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -48,11 +47,12 @@ class TFModel():
         length = tf.cast(length, tf.int32)
         return length
 
-    def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
-        self.attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states)
+    def encode_w_attn(self, inputs, mask, prev_states_fw, prev_states_bw, scope="", reuse=False):
+        self.attn_cell_fw = LSTMAttnCell(HIDDEN_DIM, prev_states_fw)
+        self.attn_cell_bw = LSTMAttnCell(HIDDEN_DIM, prev_states_bw)
         with tf.variable_scope(scope, reuse):
-            o, final_state = tf.nn.dynamic_rnn(self.attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
-        return (o, final_state)
+            output_tuple, final_state = tf.nn.bidirectional_dynamic_rnn(self.attn_cell_fw, self.attn_cell_bw, inputs, dtype=tf.float32, sequence_length=mask)
+        return (output_tuple, final_state) 
 
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
@@ -60,11 +60,15 @@ class TFModel():
 
         # Question encoder
         with tf.variable_scope("question"): 
-            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(questions))
+            q_cell_fw = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            q_cell_bw = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            q_output_tuple, _ = tf.nn.bidirectional_dynamic_rnn(q_cell_fw, q_cell_bw, questions, dtype=tf.float32, sequence_length=self.seq_length(questions))
+            q_output_fw, q_output_bw = q_output_tuple
 
         # Passage encoder
-        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(passages), q_outputs)
+        p_output_tuple, _ = self.encode_w_attn(passages, self.seq_length(passages), q_output_fw, q_output_bw, "passage_w_attn")
+        p_output_fw, p_output_bw = p_output_tuple
+        p_output_concat = tf.concat(2, p_output_tuple)
 
         # with tf.variable_scope("passage"):
         #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
@@ -72,18 +76,24 @@ class TFModel():
 
         # Attention state encoder
         with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32)
+            a_cell_fw = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            a_cell_bw = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
 
-        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
+            a_output_tuple, _ = tf.nn.bidirectional_dynamic_rnn(a_cell_fw, a_cell_bw, p_output_concat, sequence_length=self.seq_length(passages), dtype=tf.float32)
+            a_output_fw, a_output_bw = a_output_tuple
+
+        q_last_fw = tf.slice(q_output_fw, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_last_bw = tf.slice(q_output_bw, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last_fw = tf.slice(p_output_fw, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last_bw = tf.slice(p_output_bw, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        a_last_fw = tf.slice(a_output_fw, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        a_last_bw = tf.slice(a_output_bw, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_a_hidden = tf.concat(2, [q_last_fw, q_last_bw, p_last_fw, p_last_bw, a_last_fw, a_last_bw]) # SHAPE: [BATCH, 1, 6*HIDDEN_DIM]
        
         preds = list()
         
         with tf.variable_scope("decode"):
-            d_cell_dim = 3*HIDDEN_DIM
+            d_cell_dim = 6*HIDDEN_DIM
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Make starter token input
@@ -122,6 +132,7 @@ class TFModel():
         masks = tf.sequence_mask(stop_token_index, OUTPUT_MAX_LENGTH)
 
         loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
+        #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
 
         # apply masks
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
@@ -190,7 +201,6 @@ if __name__ == "__main__":
     embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
         start = time.time()
-        model = TFAttnModel(embeddings)
         model = TFModel(embeddings)
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
 
