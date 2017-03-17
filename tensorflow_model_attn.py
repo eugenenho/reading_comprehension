@@ -12,6 +12,10 @@ from tf_lstm_attention_cell import LSTMAttnCell
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
+<<<<<<< HEAD
+=======
+
+>>>>>>> 63de8019f86be65f5f9a07230890b2d6c1275b9b
 class TFModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -47,10 +51,17 @@ class TFModel():
         length = tf.cast(length, tf.int32)
         return length
 
+<<<<<<< HEAD
     def encode_w_attn(self, inputs, sequence_length, prev_states, scope="", reuse=False):
         self.attn_cell = LSTMAttnCell(self.size, prev_states)
         with vs.variable_scope(scope, reuse):
             o, final_state = tf.nn.dynamic_rnn(self.attn_cell, inputs, dtype=tf.float32, sequence_length=self.seq_length(passages))
+=======
+    def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
+        self.attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states)
+        with tf.variable_scope(scope, reuse):
+            o, final_state = tf.nn.dynamic_rnn(self.attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
+>>>>>>> 63de8019f86be65f5f9a07230890b2d6c1275b9b
         return (o, final_state)
 
     def add_prediction_op(self): 
@@ -63,7 +74,11 @@ class TFModel():
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(questions))
 
         # Passage encoder
+<<<<<<< HEAD
         p_outputs, _ = encode_w_attn(passages, self.seq_length(passages), q_outputs)
+=======
+        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(passages), q_outputs)
+>>>>>>> 63de8019f86be65f5f9a07230890b2d6c1275b9b
 
         # with tf.variable_scope("passage"):
         #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
@@ -101,7 +116,12 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
+<<<<<<< HEAD
                 inp = y_t
+=======
+                imp = tf.argmax(y_t, 1)
+                imp = tf.nn.embedding_lookup(self.pretrained_embeddings, imp)
+>>>>>>> 63de8019f86be65f5f9a07230890b2d6c1275b9b
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()

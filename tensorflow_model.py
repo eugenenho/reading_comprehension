@@ -8,7 +8,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 
-from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
+from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR, PRED_BATCH_SIZE
 
 # MASKING AND DROPOUT!!!, and save as we go, and data memory handling
 class TFModel():
@@ -83,7 +83,8 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                inp = y_t
+                imp = tf.argmax(y_t, 1)
+                imp = tf.nn.embedding_lookup(self.pretrained_embeddings, imp)
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -138,10 +139,6 @@ class TFModel():
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_batch()
-            if i % 1200 == 0 and i > 0:
-                self.log.write('\nNow saving file...')
-                saver.save(sess, './data/model.weights')
-                self.log.write('\nSaved...')
             i += 1
         return losses
 
@@ -153,6 +150,33 @@ class TFModel():
             losses.append(loss)
             saver.save(sess, './data/model.weights')
         return losses
+
+    def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
+        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch)
+        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed)
+        return predictions
+
+    def predict(self, sess, saver, data):
+        prog = Progbar(target=1 + int(data.data_size / PRED_BATCH_SIZE), file_given=self.log)
+        
+        preds = list()
+        i = 0
+        
+        batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
+        while batch is not None:
+            q_batch = batch[0]
+            p_batch = batch[1]
+            s_t_batch = batch[3]
+
+            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch)
+            preds.append(prediction)
+
+            prog.update(i + 1, [("Predictions going...", 1)])
+
+            batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
+            i += 1
+
+        return preds
 
     def build(self):
         self.add_placeholders()
@@ -185,7 +209,7 @@ if __name__ == "__main__":
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
 
-    model.log.write('\nlosses list: ' + losses)
+    model.log.write('\nlosses list: ' + str(losses))
     model.log.close()
 
 
