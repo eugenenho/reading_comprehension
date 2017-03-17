@@ -79,7 +79,7 @@ class TFModel():
             a_cell_fw = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
             a_cell_bw = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
 
-            a_output_tuple, _ = tf.nn.bidirectional_dynamic_rnn(a_cell_fw, a_cell_bw, p_output_concat, dtype=tf.float32)
+            a_output_tuple, _ = tf.nn.bidirectional_dynamic_rnn(a_cell_fw, a_cell_bw, p_output_concat, sequence_length=self.seq_length(passages), dtype=tf.float32)
             a_output_fw, a_output_bw = a_output_tuple
 
         q_last_fw = tf.slice(q_output_fw, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
