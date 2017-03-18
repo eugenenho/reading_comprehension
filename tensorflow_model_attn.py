@@ -102,13 +102,13 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                if self.testing:
-                    inp = tf.argmax(tf.nn.softmax(y_t), 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                else: 
-                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                # if self.testing:
+                inp = tf.argmax(tf.nn.softmax(y_t), 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                # else: 
+                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
 
@@ -181,21 +181,21 @@ class TFModel():
         return losses
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
-        print self.pred
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch)
+        print 'feed', feed
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
-        print 'ps inside:', predictions, predictions.shape
         predictions = np.argmax(predictions, axis=2)
-        print 'after', predictions.shape
         return predictions
 
     def predict(self, sess, saver, data):
+        self.testing = False
         prog = Progbar(target=1 + int(data.data_size / PRED_BATCH_SIZE), file_given=self.log)
         
         preds = list()
         i = 0
         
         batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
+        print 'batch', batch
         while batch is not None:
             q_batch = batch[0]
             p_batch = batch[1]
@@ -244,13 +244,10 @@ if __name__ == "__main__":
             losses = model.fit(session, saver, data)
 
             model.log.write("starting predictions now.....")
-            predictions = model.predict(session, saver, data)
-
-    index_word = get_predictions.get_index_word_dict()
-
-    preds = get_predictions.get_predictions(data, embeddings)
-    preds = get_predictions.sub_in_word(preds, index_word)
-    get_predictions.build_json_file(preds, DATA_SET + '_preds.json')
+            preds = model.predict(session, saver, data)
+            index_word = get_predictions.get_index_word_dict()
+            preds = get_predictions.sub_in_word(preds, index_word)
+            get_predictions.build_json_file(preds, 'train' + '_preds.json')
 
 
     model.log.close()
