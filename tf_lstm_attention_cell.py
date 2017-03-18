@@ -1,11 +1,4 @@
-import time
 import tensorflow as tf
-import numpy as np
-
-from progbar import Progbar
-
-
-from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 	def __init__(self, num_units, encoder_output, scope = None):
@@ -45,14 +38,6 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(out, original_c)
 		return (out, output_tuple)
-
-
-
-
-				# W_a : [2H x H]
-				# W_a = tf.get_variable('W_a', shape=(2 * HIDDEN_DIM, HIDDEN_DIM), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)				
-				# h_t_reshaped : [None x H]
-				# h_t_reshaped = tf.matmul(h_t, W_a)
 
 
 

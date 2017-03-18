@@ -10,9 +10,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 import get_predictions
 
-from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR, PRED_BATCH_SIZE
-
-# MASKING AND DROPOUT!!!, and save as we go, and data memory handling
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
 
 class TFModel():
     def add_placeholders(self):
@@ -87,7 +85,7 @@ class TFModel():
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Make starter token input
-            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
+            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, VOCAB_SIZE]
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -97,10 +95,10 @@ class TFModel():
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
-                U = tf.get_variable('U', shape=(d_cell_dim, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
+                U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+                b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
-                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
+                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
                 # if self.testing:
                 inp = tf.argmax(tf.nn.softmax(y_t), 1)
@@ -119,7 +117,7 @@ class TFModel():
         return preds
 
     def add_loss_op(self, preds):
-        y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
+        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
         
         # CREATE MASKS HERE
         index_maxs = tf.argmax(preds, 2)
@@ -166,7 +164,7 @@ class TFModel():
             batch = data.get_batch()
             if i % 1200 == 0 and i > 0:
                 self.log.write('\nNow saving file...')
-                saver.save(sess, './data/model.weights')
+                saver.save(sess, SAVE_MODEL_DIR)
                 self.log.write('\nSaved...')
             i += 1
         return losses
@@ -177,7 +175,7 @@ class TFModel():
             self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
             loss = self.run_epoch(sess, data)
             losses.append(loss)
-            saver.save(sess, './data/model.weights')
+            saver.save(sess, SAVE_MODEL_DIR)
         return losses
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
@@ -189,12 +187,12 @@ class TFModel():
 
     def predict(self, sess, saver, data):
         self.testing = False
-        prog = Progbar(target=1 + int(data.data_size / PRED_BATCH_SIZE), file_given=self.log)
+        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         preds = list()
         i = 0
         
-        batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
+        batch = data.get_batch(batch_size=TRAIN_BATCH_SIZE)
         print 'batch', batch
         while batch is not None:
             q_batch = batch[0]
@@ -206,7 +204,7 @@ class TFModel():
 
             prog.update(i + 1, [("Predictions going...", 1)])
 
-            batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
+            batch = data.get_batch(batch_size=TRAIN_BATCH_SIZE)
             i += 1
 
         return preds
@@ -247,7 +245,7 @@ if __name__ == "__main__":
             preds = model.predict(session, saver, data)
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
-            get_predictions.build_json_file(preds, 'train' + '_preds.json')
+            get_predictions.build_json_file(preds, './data/train_preds.json')
 
 
     model.log.close()

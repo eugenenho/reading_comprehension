@@ -153,15 +153,6 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
             for w in vocab_list:
                 vocab_file.write(w + b"\n")
 
-"""
-def sentence_to_token_ids(sentence, vocabulary, tokenizer=None):
-    if tokenizer:
-        words = tokenizer(sentence)
-    else:
-        words = basic_tokenizer(sentence)
-    return [vocabulary.get(w, UNK_ID) for w in words]
-"""
-
 def data_to_token_ids(data_path, target_path, vocabulary_path,
                       tokenizer=None):
     if not gfile.Exists(target_path):
@@ -284,21 +275,3 @@ if __name__ == '__main__':
         for j in range(len(passages_ids[i])):
             print(i, "-", j, "\t", passages[i][j])
             print(i, "-", j, "\t", passages_ids[i][j])
-
-    """    
-    for i, question in enumerate(questions):
-        print(i)
-        print(questions[i])
-        print(questions_ids[i])
-    """
-    """
-    print ("Testing the output pkl : val\n")
-    with open(os.path.join(data_prefix, 'val.question.pkl'), 'rb') as question_file, \
-        open(os.path.join(data_prefix, 'val.answer.pkl'), 'rb') as answer_file :
-        questions = cPickle.load(question_file)
-        answers = cPickle.load(answer_file)
-
-    for i, question in enumerate(questions):
-        print(question, " :: ", answers[i]) 
-    """   
-    
