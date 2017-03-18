@@ -21,13 +21,13 @@ _SOS = b"<sos>"
 _UNK = b"<unk>"
 _STR = b"<str>"
 _END = b"<end>"
-_START_VOCAB = [_PAD, _SOS, _UNK, _STR, _END]
+_START_VOCAB = [_PAD, _STR, _END, _SOS, _UNK]
 
 PAD_ID = 0
-SOS_ID = 1
-UNK_ID = 2
-STR_ID = 3
-END_ID = 4
+STR_ID = 1
+END_ID = 2
+SOS_ID = 3
+UNK_ID = 4
 
 def setup_args():
     parser = argparse.ArgumentParser()
