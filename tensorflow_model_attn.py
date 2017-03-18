@@ -8,6 +8,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
+import get_predictions
 
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR, PRED_BATCH_SIZE
 
@@ -242,7 +243,16 @@ if __name__ == "__main__":
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
 
-    model.log.write('\nlosses list: ' + losses)
+            model.log.write("starting predictions now.....")
+            predictions = model.predict(session, saver, data)
+
+    index_word = get_predictions.get_index_word_dict()
+
+    preds = get_predictions.get_predictions(data, embeddings)
+    preds = get_predictions.sub_in_word(preds, index_word)
+    get_predictions.build_json_file(preds, DATA_SET + '_preds.json')
+
+
     model.log.close()
 
 

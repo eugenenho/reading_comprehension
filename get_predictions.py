@@ -2,7 +2,7 @@ import json
 import time
 import tensorflow as tf
 # from tensorflow_model_attn import TFAttnModel
-from tensorflow_model_attn import TFModel
+# from tensorflow_model_attn import TFModel
 
 from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
