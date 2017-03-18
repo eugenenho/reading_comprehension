@@ -86,14 +86,7 @@ class TFModel():
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Make starter token input
-            if self.testing:
-                inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
-            else: 
-                inp = tf.slice(self.answers_placeholder, [0, 0], [-1, 1]) 
-                print 'inp', inp
-                inp = tf.reshape(tf.nn.embedding_lookup(self.pretrained_embeddings, inp), [-1, EMBEDDING_DIM])
-                print 'embed', inp
-
+            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -112,9 +105,9 @@ class TFModel():
                     inp = tf.argmax(tf.nn.softmax(y_t), 1)
                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
                 else: 
-                    if time_step + 1 < OUTPUT_MAX_LENGTH:
-                        inp = tf.slice(self.answers_placeholder, [0, time_step + 1], [-1, 1]) 
-                        inp = tf.reshape(tf.nn.embedding_lookup(self.pretrained_embeddings, inp), [-1, EMBEDDING_DIM])
+                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
 
