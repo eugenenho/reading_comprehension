@@ -21,7 +21,7 @@ class TFModel():
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
-        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
+        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, EMBEDDING_DIM), name="starter_token")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None, dropout=0.5):
@@ -93,6 +93,7 @@ class TFModel():
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
+            print inp
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
@@ -101,9 +102,11 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
+                print 'output shape:', y_t
                 inp = tf.argmax(tf.nn.softmax(y_t), 1)
+                print 'after softmax', inp
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-
+                print 'after update', inp
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
 

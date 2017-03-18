@@ -4,7 +4,7 @@ import cPickle
 import h5py
 
 from sklearn.preprocessing import OneHotEncoder
-from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_DATA_SIZE
+from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, EMBEDDING_DIM, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_DATA_SIZE
 
 class TFDataHolder:
 
@@ -90,7 +90,7 @@ class TFDataHolder:
 
 
 	def build_start_token(self, batch_size=TRAIN_BATCH_SIZE):
-		token_mat = np.zeros((batch_size, MAX_NB_WORDS))
+		token_mat = np.zeros((batch_size, EMBEDDING_DIM))
 		for row in token_mat:
 			row[1] = 1
 		return token_mat
