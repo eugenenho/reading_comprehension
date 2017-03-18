@@ -87,13 +87,12 @@ class TFModel():
 
             # Make starter token input
             inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
-            
+
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
-            print inp
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
@@ -102,10 +101,16 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                inp = tf.argmax(tf.nn.softmax(y_t), 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                if self.testing:
+                    inp = tf.argmax(tf.nn.softmax(y_t), 1)
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                else: 
+                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+
                 preds.append(y_t)
-                
+
                 tf.get_variable_scope().reuse_variables()
 
             packed_preds = tf.pack(preds, axis=2)
@@ -211,7 +216,8 @@ class TFModel():
         self.loss = self.add_loss_op(self.pred)
         self.train_op = self.add_training_op(self.loss)
 
-    def __init__(self, embeddings):
+    def __init__(self, embeddings, testing=False):
+        self.testing = testing
         self.pretrained_embeddings = tf.Variable(embeddings)
         self.log = open(LOG_FILE_DIR, "a")
         self.build()
