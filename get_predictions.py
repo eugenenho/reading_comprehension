@@ -34,7 +34,7 @@ def get_ground_truth(data, index_word):
 		batch = data.get_batch()
 
 	word_truths = sub_in_word(A_data, index_word)
-	build_json_file(word_truths, DATA_SET + '_ground_truth.json')
+	build_json_file(word_truths, './data/' + DATA_SET + '_ground_truth.json')
 
 
 def get_index_word_dict():

@@ -245,7 +245,7 @@ if __name__ == "__main__":
             preds = model.predict(session, saver, data)
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
-            get_predictions.build_json_file(preds, 'train' + '_preds.json')
+            get_predictions.build_json_file(preds, './data/train_preds.json')
 
 
     model.log.close()
