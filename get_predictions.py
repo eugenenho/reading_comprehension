@@ -17,7 +17,7 @@ def get_predictions(data, embeddings):
 	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
 	with tf.Graph().as_default():
 		start = time.time()
-		model = TFModel(embeddings)
+		model = TFModel(embeddings, True)
 		print "\nRebuild graph took " + str(time.time() - start) + " seconds"
 		init = tf.global_variables_initializer()
 		with tf.Session() as session:
