@@ -102,12 +102,10 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                print 'output shape:', y_t
                 inp = tf.argmax(tf.nn.softmax(y_t), 1)
-                print 'after softmax', inp
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                print 'after update', inp
                 preds.append(y_t)
+                
                 tf.get_variable_scope().reuse_variables()
 
             packed_preds = tf.pack(preds, axis=2)
