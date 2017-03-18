@@ -108,19 +108,32 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
                         print("processing line %d" % counter)
                     
                     for item in single_list: 
-                        # This applies when dealing with passags.pkl or answers.pkl (some queries has >1 answers)
-                        # When dealing with passages.pkl: [ [ [token, .., token],.., [token, .., token]  ]]
-                        #                                      ^ Each passage 
-                        #                                   ^ Each query has ~10 passages
-                        #                                 ^ list of all queries' passages
-                        if(isinstance(item, list)): # Each item representing one passage or one answer
+                        # This applies when dealing with answers.pkl (some queries has >1 answers)
+                        # When dealing with answers.pkl: [ [ [token, .., token],.., [token, .., token]  ]]
+                        #                                      ^ Each answer 
+                        #                                   ^ Each query has >=1 answers
+                        #                                 ^ list of all queries' answers
+                        if(isinstance(item, list)): # Each item representing one answer
                         
-                            for w in item: # Each w representing one token in a passage or answer
+                            for w in item: # Each w representing one token in answer
                                 if w in vocab:
                                     vocab[w] += 1
                                 else:
                                     vocab[w] = 1
                         
+                        # This applies when dealing with passages.pkl (some queries has >1 answers)
+                        # When dealing with passages.pkl: [ [ (0, [token, .., token]),.., (1, [token, .., token])  ]]
+                        #                                      ^ Each passage 
+                        #                                   ^ Each query has >=1 passages
+                        #                                 ^ list of all queries' passages
+                        elif(isinstance(item, tuple)): # Each item representing one passage tuple 
+                            is_selected, passage_tokens = item
+                            for w in passage_tokens: # Each w representing one token in a passage 
+                                if w in vocab:
+                                    vocab[w] += 1
+                                else:
+                                    vocab[w] = 1
+
                         # If item is word:
                         else:
                             if item in vocab:
@@ -173,8 +186,12 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
                 #                                      ^ Each passage 
                 #                                   ^ Each query has ~10 passages
                 #                                 ^ list of all queries' passages
-                if(isinstance(item, list)): # Each item representing one passage or one answer
+                if(isinstance(item, list)): # Each item representing one answer
                     intermediate_step = [vocab.get(w, UNK_ID) for w in item] # each w representing one token
+                    token_id_list.append(intermediate_step)
+                elif(isinstance(item, tuple)): # Each item representing one passage tuple 
+                    is_selected, passage_tokens = item
+                    intermediate_step = [vocab.get(w, UNK_ID) for w in passage_tokens] # each passage_tuple[1] representing one token (passage_tuple[0] is is_selected)
                     token_id_list.append(intermediate_step)
                 else:       
                     token_id_list.append(vocab.get(item, UNK_ID))
