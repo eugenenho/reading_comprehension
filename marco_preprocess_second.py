@@ -19,11 +19,15 @@ from os.path import join as pjoin
 _PAD = b"<pad>"
 _SOS = b"<sos>"
 _UNK = b"<unk>"
-_START_VOCAB = [_PAD, _SOS, _UNK]
+_STR = b"<str>"
+_END = b"<end>"
+_START_VOCAB = [_PAD, _STR, _END, _SOS, _UNK]
 
 PAD_ID = 0
-SOS_ID = 1
-UNK_ID = 2
+STR_ID = 1
+END_ID = 2
+SOS_ID = 3
+UNK_ID = 4
 
 def setup_args():
     parser = argparse.ArgumentParser()
@@ -108,19 +112,32 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
                         print("processing line %d" % counter)
                     
                     for item in single_list: 
-                        # This applies when dealing with passags.pkl or answers.pkl (some queries has >1 answers)
-                        # When dealing with passages.pkl: [ [ [token, .., token],.., [token, .., token]  ]]
-                        #                                      ^ Each passage 
-                        #                                   ^ Each query has ~10 passages
-                        #                                 ^ list of all queries' passages
-                        if(isinstance(item, list)): # Each item representing one passage or one answer
+                        # This applies when dealing with answers.pkl (some queries has >1 answers)
+                        # When dealing with answers.pkl: [ [ [token, .., token],.., [token, .., token]  ]]
+                        #                                      ^ Each answer 
+                        #                                   ^ Each query has >=1 answers
+                        #                                 ^ list of all queries' answers
+                        if(isinstance(item, list)): # Each item representing one answer
                         
-                            for w in item: # Each w representing one token in a passage or answer
+                            for w in item: # Each w representing one token in answer
                                 if w in vocab:
                                     vocab[w] += 1
                                 else:
                                     vocab[w] = 1
                         
+                        # This applies when dealing with passages.pkl (some queries has >1 answers)
+                        # When dealing with passages.pkl: [ [ (0, [token, .., token]),.., (1, [token, .., token])  ]]
+                        #                                      ^ Each passage 
+                        #                                   ^ Each query has >=1 passages
+                        #                                 ^ list of all queries' passages
+                        elif(isinstance(item, tuple)): # Each item representing one passage tuple 
+                            is_selected, passage_tokens = item
+                            for w in passage_tokens: # Each w representing one token in a passage 
+                                if w in vocab:
+                                    vocab[w] += 1
+                                else:
+                                    vocab[w] = 1
+
                         # If item is word:
                         else:
                             if item in vocab:
@@ -130,20 +147,11 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
 
         vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
         print("Vocabulary size: %d" % len(vocab_list))
-        # print(vocab_list)
+        print(vocab_list)
 
         with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
             for w in vocab_list:
                 vocab_file.write(w + b"\n")
-
-"""
-def sentence_to_token_ids(sentence, vocabulary, tokenizer=None):
-    if tokenizer:
-        words = tokenizer(sentence)
-    else:
-        words = basic_tokenizer(sentence)
-    return [vocabulary.get(w, UNK_ID) for w in words]
-"""
 
 def data_to_token_ids(data_path, target_path, vocabulary_path,
                       tokenizer=None):
@@ -173,8 +181,12 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
                 #                                      ^ Each passage 
                 #                                   ^ Each query has ~10 passages
                 #                                 ^ list of all queries' passages
-                if(isinstance(item, list)): # Each item representing one passage or one answer
+                if(isinstance(item, list)): # Each item representing one answer
                     intermediate_step = [vocab.get(w, UNK_ID) for w in item] # each w representing one token
+                    token_id_list.append(intermediate_step)
+                elif(isinstance(item, tuple)): # Each item representing one passage tuple 
+                    is_selected, passage_tokens = item
+                    intermediate_step = [vocab.get(w, UNK_ID) for w in passage_tokens] # each passage_tuple[1] representing one token (passage_tuple[0] is is_selected)
                     token_id_list.append(intermediate_step)
                 else:       
                     token_id_list.append(vocab.get(item, UNK_ID))
@@ -207,7 +219,7 @@ if __name__ == '__main__':
     # ======== Trim Distributed Word Representation =======
     # If you use other word representations, you should change the code below
 
-    #process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
+    process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
 
     # ======== Creating Dataset =========
     # We created our data files seperately
@@ -263,21 +275,3 @@ if __name__ == '__main__':
         for j in range(len(passages_ids[i])):
             print(i, "-", j, "\t", passages[i][j])
             print(i, "-", j, "\t", passages_ids[i][j])
-
-    """    
-    for i, question in enumerate(questions):
-        print(i)
-        print(questions[i])
-        print(questions_ids[i])
-    """
-    """
-    print ("Testing the output pkl : val\n")
-    with open(os.path.join(data_prefix, 'val.question.pkl'), 'rb') as question_file, \
-        open(os.path.join(data_prefix, 'val.answer.pkl'), 'rb') as answer_file :
-        questions = cPickle.load(question_file)
-        answers = cPickle.load(answer_file)
-
-    for i, question in enumerate(questions):
-        print(question, " :: ", answers[i]) 
-    """   
-    

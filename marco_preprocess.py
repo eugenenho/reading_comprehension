@@ -19,109 +19,18 @@ sys.setdefaultencoding('utf8')
 random.seed(42)
 np.random.seed(42)
 
-"""
-
-#squad_base_url = "https://rajpurkar.github.io/SQuAD-explorer/dataset/"
-
-def reporthook(t):
-  # https://github.com/tqdm/tqdm
-  last_b = [0]
-
-  def inner(b=1, bsize=1, tsize=None):
-    
-    #b: int, optional
-    #    Number of blocks just transferred [default: 1].
-    #bsize: int, optional
-    #    Size of each block (in tqdm units) [default: 1].
-    #tsize: int, optional
-    #    Total size (in tqdm units). If [default: None] remains unchanged.
-    
-    if tsize is not None:
-        t.total = tsize
-    t.update((b - last_b[0]) * bsize)
-    last_b[0] = b
-  return inner
-
-def maybe_download(url, filename, prefix, num_bytes=None):
-    # Takes an URL, a filename, and the expected bytes, download
-    # the contents and returns the filename
-    # num_bytes=None disables the file size check.
-    local_filename = None
-    if not os.path.exists(os.path.join(prefix, filename)):
-        try:
-            print("Downloading file {}...".format(url + filename))
-            with tqdm(unit='B', unit_scale=True, miniters=1, desc=filename) as t:
-                local_filename, _ = urlretrieve(url + filename, os.path.join(prefix,filename), reporthook=reporthook(t))
-        except AttributeError as e:
-            print("An error occurred when downloading the file! Please get the dataset using a browser.")
-            raise e
-    # We have a downloaded file
-    # Check the stats and make sure they are ok
-    file_stats = os.stat(os.path.join(prefix,filename))
-    if num_bytes is None or file_stats.st_size == num_bytes:
-        print("File {} successfully loaded".format(filename))
-    else:
-        raise Exception("Unexpected dataset size. Please get the dataset using a browser.")
-
-    return local_filename
-"""
-
 def data_from_json(filename):
-    
-
-    """
-    data_file = open(filename, "r").read()
-    data = [json.loads(str(item)) for item in data_file.strip().split('\n')]
-    print (data)
-    """
     with open(filename) as data_file:
-        
         data = []
-        #limit = 20
         counter = 0
         for line in data_file:
-            #if counter >= limit: break
-            #print ("line", line)
-            #print ("json", json.loads(line))
             data.append(json.loads(line))
-            #data = json.load(data_file)
-            #data = json.load(line)
             counter += 1
-    #print(data[0]['query'])
     return data
-
-
-"""
-def list_topics(data):
-    list_topics = [data['data'][idx]['title'] for idx in range(0,len(data['data']))]
-    return list_topics
-"""
 
 def tokenize(sequence):
     tokens = [token.replace("``", '"').replace("''", '"') for token in nltk.word_tokenize(sequence)]
     return map(lambda x:x.encode('utf8'), tokens)
-
-"""
-def token_idx_map(context, context_tokens):
-    acc = ''
-    current_token_idx = 0
-    token_map = dict()
-
-    for char_idx, char in enumerate(context):
-        if char != u' ':
-            acc += char
-            context_token = unicode(context_tokens[current_token_idx])
-            if acc == context_token:
-                syn_start = char_idx - len(acc) + 1
-                token_map[syn_start] = [acc, current_token_idx]
-                acc = ''
-                current_token_idx += 1
-    return token_map
-
-
-def invert_map(answer_map):
-    return {v[1]: [v[0], k] for k, v in answer_map.iteritems()}
-"""
 
 def read_write_dataset(dataset, tier, prefix):
     """Reads the dataset, extracts context, question, answer,
@@ -152,15 +61,22 @@ def read_write_dataset(dataset, tier, prefix):
             questions_global.append(question_tokens)
 
             # Extract "passages"
-            passage_tokens_list = []
+            passage_tuple_list = []
             for passage_num in range(len(current_query['passages'])):
-                if current_query['passages'][passage_num]['is_selected'] == 0: continue
+                
+                # Grab is_selected
+                is_selected = current_query['passages'][passage_num]['is_selected']
+
+                # Grab passage
                 passage = current_query['passages'][passage_num]['passage_text']
                 passage = passage.replace("''", '" ')
                 passage = passage.replace("``", '" ')
                 passage_tokens = tokenize(passage)
-                passage_tokens_list.append(passage_tokens)
-            passages_global.append(passage_tokens_list)
+
+                # Create tuple
+                passage_tuple = (is_selected, passage_tokens)
+                passage_tuple_list.append(passage_tuple)
+            passages_global.append(passage_tuple_list)
 
             # Extract "answers"
             answer_tokens_list = []
@@ -179,8 +95,13 @@ def read_write_dataset(dataset, tier, prefix):
             count += 1
             
         print (len(questions_global), " queries processed.")
+
         # Check if the number of entries are the same across all four categories of info extraction
         assert len(questions_global) == len(passages_global) == len(answers_global) == len(types_global)    
+
+        # Checking code
+        for i in range(100):
+            print(i, " : ", passages_global[i])
 
         # Pickle
         try:
@@ -214,12 +135,6 @@ def save_files(prefix, tier, indices):
         questions = cPickle.load(question_file)
         answers = cPickle.load(answer_file)
         types = cPickle.load(type_file)
-    
-    """
-    print("Original Question Order: \n")
-    for i, question in enumerate(questions):
-        print(question, " |||| ", answers[i])
-    """
 
     new_passages = []
     new_questions = []
@@ -289,32 +204,3 @@ if __name__ == '__main__':
     dev_data = data_from_json(os.path.join(download_prefix, dev_filename))
     dev_num_questions, dev_num_answers = read_write_dataset(dev_data, 'dev', data_prefix)
     print("Processed {} questions and {} answers in dev".format(dev_num_questions, dev_num_answers))
-
-
-    """
-    # Testing code
-    print ("Testing the output pkl : train\n")
-    with open(os.path.join(data_prefix, 'train.question.pkl'), 'rb') as question_file, \
-        open(os.path.join(data_prefix, 'train.answer.pkl'), 'rb') as answer_file, \
-        open(os.path.join(data_prefix, 'train.passage.pkl'), 'rb') as passage_file :
-        questions = cPickle.load(question_file)
-        answers = cPickle.load(answer_file)
-        passages = cPickle.load(passage_file)
-
-    for i, question in enumerate(questions):
-        print(question, " :: ", answers[i]) 
-
-    for passage in passages:
-        print(passage)       
-
-    
-    print ("Testing the output pkl : val\n")
-    with open(os.path.join(data_prefix, 'val.question.pkl'), 'rb') as question_file, \
-        open(os.path.join(data_prefix, 'val.answer.pkl'), 'rb') as answer_file :
-        questions = cPickle.load(question_file)
-        answers = cPickle.load(answer_file)
-
-    for i, question in enumerate(questions):
-        print(question, " :: ", answers[i]) 
-    """   
-    
