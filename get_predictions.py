@@ -2,7 +2,7 @@ import json
 import time
 import tensorflow as tf
 # from tensorflow_model_attn import TFAttnModel
-from tensorflow_model_attn import TFModel
+# from tensorflow_model_attn import TFModel
 
 from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
@@ -13,7 +13,7 @@ from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, PRED_BATCH
 DATA_SET = 'train'
 MODEL_PATH = './data/Models/1direction_attn_lstm_with_embeddings_passed_in/model.weights'
 
-def get_predictions(data, embeddings):
+def get_preds(data, embeddings):
 	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
 	with tf.Graph().as_default():
 		start = time.time()
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 	
 	index_word = get_index_word_dict()
 
-	preds = get_predictions(data, embeddings)
+	preds = get_preds(data, embeddings)
 	preds = sub_in_word(preds, index_word)
 	build_json_file(preds, DATA_SET + '_preds_json.json')
 
