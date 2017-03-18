@@ -146,10 +146,8 @@ class TFModel(Model):
 
 if __name__ == "__main__":
     print 'Starting, and now printing to log.txt'
-    # data = TFDataHolder('train')
-    data = None
-    # embeddings = EmbeddingHolder().get_embeddings_mat()
-    embeddings = np.zeros((VOCAB_SIZE, EMBEDDING_DIM), dtype=np.float32)
+    data = TFDataHolder('train')
+    embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
         start = time.time()
         model = TFModel(embeddings)
