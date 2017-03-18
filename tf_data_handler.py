@@ -6,6 +6,12 @@ import h5py
 from sklearn.preprocessing import OneHotEncoder
 from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_DATA_SIZE
 
+PAD_ID = 0
+END_ID = 1
+UNK_ID = 2
+STR_ID = 3
+SOS_ID = 4
+
 class TFDataHolder:
 
 	# pass in data_set ('train', 'val', 'dev')
@@ -42,11 +48,11 @@ class TFDataHolder:
 
 			# padding
 			if len(question) < QUESTION_MAX_LENGTH:
-				pad = [0] * (QUESTION_MAX_LENGTH - len(question))
+				pad = [PAD_ID] * (QUESTION_MAX_LENGTH - len(question))
 				question.extend(pad)
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
-		Q_data = np.where(Q_data < MAX_NB_WORDS, Q_data, 2)
+		Q_data = np.where(Q_data < MAX_NB_WORDS, Q_data, UNK_ID)
 		np.save("./data/marco/" + self.data_set + ".data.q_data", Q_data)
 
 		self.log.write('\nbuilt q data')
@@ -57,13 +63,16 @@ class TFDataHolder:
 		passages_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.passage.pkl","rb"))
 		P_data = np.zeros((self.data_size, PASSAGE_MAX_LENGTH))
 		for i, p_l in enumerate(passages_list):
-			for passage in p_l:
+			for passage_tuple in p_l:
+				#is_selected, passage = passage_tuple
+				passage = passage_tuple
+				
 				# padding
 				if len(passage) < PASSAGE_MAX_LENGTH:
-					passage.extend([0] * (PASSAGE_MAX_LENGTH - len(passage)) )
+					passage.extend([PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage)) )
 
 				P_data[i] = np.array(passage[:PASSAGE_MAX_LENGTH])
-		P_data = np.where(P_data < MAX_NB_WORDS, P_data, 2)
+		P_data = np.where(P_data < MAX_NB_WORDS, P_data, UNK_ID)
 		np.save("./data/marco/" + self.data_set + ".data.p_data", P_data)
 
 		self.log.write('\nbuilt p data')
@@ -74,15 +83,15 @@ class TFDataHolder:
 		answers_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.answer.pkl","rb" ))
 		A_data = np.zeros((self.data_size, OUTPUT_MAX_LENGTH))
 		for i, ans in enumerate(answers_list):
-			# weird thing here, the answer is stores as a list of lists
+			# simply take the first answer if there are multiple answers
 			ans = ans[0] if len(ans) >= 1 else []
 			# pad / truncate values
 			pad_len = OUTPUT_MAX_LENGTH - len(ans) - 1
-			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [1] + [0] * pad_len )
+			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [END_ID] + [PAD_ID] * pad_len )
 			# add to matrix
 			A_data[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
 
-		A_data = np.where(A_data < MAX_NB_WORDS, A_data, 2)
+		A_data = np.where(A_data < MAX_NB_WORDS, A_data, UNK_ID)
 		np.save("./data/marco/" + self.data_set + ".data.a_data", A_data)
 
 		self.log.write('\nbuilt y data')

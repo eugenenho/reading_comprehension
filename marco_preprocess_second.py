@@ -19,11 +19,15 @@ from os.path import join as pjoin
 _PAD = b"<pad>"
 _SOS = b"<sos>"
 _UNK = b"<unk>"
-_START_VOCAB = [_PAD, _SOS, _UNK]
+_STR = b"<str>"
+_END = b"<end>"
+_START_VOCAB = [_PAD, _SOS, _UNK, _STR, _END]
 
 PAD_ID = 0
 SOS_ID = 1
 UNK_ID = 2
+STR_ID = 3
+END_ID = 4
 
 def setup_args():
     parser = argparse.ArgumentParser()
