@@ -11,20 +11,21 @@ from embeddings_handler import EmbeddingHolder
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, PRED_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 DATA_SET = 'train'
-MODEL_PATH = './data/model.weights'
+MODEL_PATH = './data/Models/1direction_attn_lstm_with_embeddings_passed_in/model.weights'
 
 def get_predictions(data, embeddings):
 	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
 	with tf.Graph().as_default():
-			start = time.time()
-			model = TFModel(embeddings)
-			print "\nRebuild graph took " + str(time.time() - start) + " seconds"
-			init = tf.global_variables_initializer()
-			with tf.Session() as session:
-				session.run(init)
-				saver = tf.train.import_meta_graph(MODEL_PATH + ".meta")
-				saver.restore(session, MODEL_PATH)
-				predictions = model.predict(session, saver, data)
+		start = time.time()
+		model = TFModel(embeddings)
+		print "\nRebuild graph took " + str(time.time() - start) + " seconds"
+		init = tf.global_variables_initializer()
+		with tf.Session() as session:
+			session.run(init)
+			saver = tf.train.import_meta_graph(MODEL_PATH + ".meta")
+			saver.restore(session, MODEL_PATH)
+			predictions = model.predict(session, saver, data)
+	print 'predictions', predictions
 	return predictions
 
 def get_ground_truth(data, index_word):
@@ -36,7 +37,7 @@ def get_ground_truth(data, index_word):
 		batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
 
 	word_truths = sub_in_word(A_data, index_word)
-	build_json_file(word_truths, DATA_SET + '_ground_truth_json.json')
+	build_json_file(word_truths, DATA_SET + '_ground_truth.json')
 
 
 def get_index_word_dict():

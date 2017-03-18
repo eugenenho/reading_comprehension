@@ -38,8 +38,7 @@ class TFModel():
         return feed_dict
 
     def add_embedding(self, placeholder):  
-        embed_vals = tf.Variable(self.pretrained_embeddings)
-        embeddings = tf.nn.embedding_lookup(embed_vals, placeholder)
+        embeddings = tf.nn.embedding_lookup(self.pretrained_embeddings, placeholder)
         return embeddings
 
     def seq_length(self, sequence):
@@ -102,7 +101,7 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                imp = tf.argmax(y_t, 1)
+                imp = tf.argmax(tf.nn.softmax(y_t), 1)
                 imp = tf.nn.embedding_lookup(self.pretrained_embeddings, imp)
 
                 preds.append(y_t)
@@ -175,8 +174,12 @@ class TFModel():
         return losses
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
+        print self.pred
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch)
-        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed)
+        predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
+        print 'ps inside:', predictions, predictions.shape
+        predictions = np.argmax(predictions, axis=2)
+        print 'after', predictions.shape
         return predictions
 
     def predict(self, sess, saver, data):
@@ -208,7 +211,7 @@ class TFModel():
         self.train_op = self.add_training_op(self.loss)
 
     def __init__(self, embeddings):
-        self.pretrained_embeddings = embeddings
+        self.pretrained_embeddings = tf.Variable(embeddings)
         self.log = open(LOG_FILE_DIR, "a")
         self.build()
 
