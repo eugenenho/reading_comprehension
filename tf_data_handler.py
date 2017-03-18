@@ -75,11 +75,10 @@ class TFDataHolder:
 		A_data = np.zeros((self.data_size, OUTPUT_MAX_LENGTH))
 		for i, ans in enumerate(answers_list):
 			# weird thing here, the answer is stores as a list of lists
-			# ans = ans[0] if len(ans) >= 1 else []
-			# # pad / truncate values
-			# pad_len = OUTPUT_MAX_LENGTH - len(ans) - 1
-			# if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [1] + [0] * pad_len )
-			ans = [1] + [0] * (OUTPUT_MAX_LENGTH - 1)
+			ans = ans[0] if len(ans) >= 1 else []
+			# pad / truncate values
+			pad_len = OUTPUT_MAX_LENGTH - len(ans) - 1
+			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [1] + [0] * pad_len )
 			# add to matrix
 			A_data[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
 

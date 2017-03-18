@@ -104,8 +104,8 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
-                imp = tf.argmax(tf.nn.softmax(y_t), 1)
-                imp = tf.nn.embedding_lookup(self.pretrained_embeddings, imp)
+                inp = tf.argmax(tf.nn.softmax(y_t), 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
