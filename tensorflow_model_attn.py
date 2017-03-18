@@ -8,6 +8,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
+import get_predictions
 
 from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR, PRED_BATCH_SIZE
 
@@ -24,7 +25,7 @@ class TFModel():
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
-        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
+        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, EMBEDDING_DIM), name="starter_token")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None, dropout=0.5):
@@ -90,7 +91,7 @@ class TFModel():
 
             # Make starter token input
             inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
-            
+
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
@@ -104,10 +105,16 @@ class TFModel():
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
 
+                # if self.testing:
                 inp = tf.argmax(tf.nn.softmax(y_t), 1)
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                # else: 
+                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
+
                 tf.get_variable_scope().reuse_variables()
 
             packed_preds = tf.pack(preds, axis=2)
@@ -177,21 +184,21 @@ class TFModel():
         return losses
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
-        print self.pred
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch)
+        print 'feed', feed
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
-        print 'ps inside:', predictions, predictions.shape
         predictions = np.argmax(predictions, axis=2)
-        print 'after', predictions.shape
         return predictions
 
     def predict(self, sess, saver, data):
+        self.testing = False
         prog = Progbar(target=1 + int(data.data_size / PRED_BATCH_SIZE), file_given=self.log)
         
         preds = list()
         i = 0
         
         batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
+        print 'batch', batch
         while batch is not None:
             q_batch = batch[0]
             p_batch = batch[1]
@@ -213,7 +220,8 @@ class TFModel():
         self.loss = self.add_loss_op(self.pred)
         self.train_op = self.add_training_op(self.loss)
 
-    def __init__(self, embeddings):
+    def __init__(self, embeddings, testing=False):
+        self.testing = testing
         self.pretrained_embeddings = tf.Variable(embeddings)
         self.log = open(LOG_FILE_DIR, "a")
         self.build()
@@ -238,7 +246,13 @@ if __name__ == "__main__":
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
 
-    model.log.write('\nlosses list: ' + losses)
+            model.log.write("starting predictions now.....")
+            preds = model.predict(session, saver, data)
+            index_word = get_predictions.get_index_word_dict()
+            preds = get_predictions.sub_in_word(preds, index_word)
+            get_predictions.build_json_file(preds, 'train' + '_preds.json')
+
+
     model.log.close()
 
 
