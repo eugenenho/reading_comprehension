@@ -152,15 +152,23 @@ def read_write_dataset(dataset, tier, prefix):
             questions_global.append(question_tokens)
 
             # Extract "passages"
-            passage_tokens_list = []
+            passage_tuple_list = []
             for passage_num in range(len(current_query['passages'])):
-                if current_query['passages'][passage_num]['is_selected'] == 0: continue
+                
+                # Grab is_selected
+                is_selected = current_query['passages'][passage_num]['is_selected']
+                # if current_query['passages'][passage_num]['is_selected'] == 0: continue
+
+                # Grab passage
                 passage = current_query['passages'][passage_num]['passage_text']
                 passage = passage.replace("''", '" ')
                 passage = passage.replace("``", '" ')
                 passage_tokens = tokenize(passage)
-                passage_tokens_list.append(passage_tokens)
-            passages_global.append(passage_tokens_list)
+
+                # Create tuple
+                passage_tuple = (is_selected, passage_tokens)
+                passage_tuple_list.append(passage_tuple)
+            passages_global.append(passage_tuple_list)
 
             # Extract "answers"
             answer_tokens_list = []
@@ -181,6 +189,10 @@ def read_write_dataset(dataset, tier, prefix):
         print (len(questions_global), " queries processed.")
         # Check if the number of entries are the same across all four categories of info extraction
         assert len(questions_global) == len(passages_global) == len(answers_global) == len(types_global)    
+
+        # Checking code
+        for i in range(100):
+            print(i, " : ", passages_global[i])
 
         # Pickle
         try:
