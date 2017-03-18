@@ -9,9 +9,8 @@ from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 
-from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
 
-# MASKING AND DROPOUT!!!, and save as we go, and data memory handling
 class TFModel():
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -20,7 +19,7 @@ class TFModel():
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
-        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, MAX_NB_WORDS), name="starter_token")
+        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, VOCAB_SIZE), name="starter_token")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None, dropout=0.5):
@@ -97,7 +96,7 @@ class TFModel():
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Make starter token input
-            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
+            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, VOCAB_SIZE]
             
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -107,10 +106,10 @@ class TFModel():
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
-                U = tf.get_variable('U', shape=(d_cell_dim, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
+                U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+                b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
-                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
+                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
                 inp = y_t
 
@@ -122,7 +121,7 @@ class TFModel():
         return preds
 
     def add_loss_op(self, preds):
-        y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
+        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
         
         # CREATE MASKS HERE
         index_maxs = tf.argmax(preds, 2)
@@ -170,7 +169,7 @@ class TFModel():
             batch = data.get_batch()
             if i % 1200 == 0 and i > 0:
                 self.log.write('\nNow saving file...')
-                saver.save(sess, './data/model.weights')
+                saver.save(sess, SAVE_MODEL_DIR)
                 self.log.write('\nSaved...')
             i += 1
         return losses
@@ -181,7 +180,7 @@ class TFModel():
             self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
             loss = self.run_epoch(sess, data)
             losses.append(loss)
-            saver.save(sess, './data/model.weights')
+            saver.save(sess, SAVE_MODEL_DIR)
         return losses
 
     def build(self):

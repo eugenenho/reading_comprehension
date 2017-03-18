@@ -2,17 +2,16 @@ import os
 import numpy as np
 from collections import defaultdict
 
-from simple_configs import LOG_FILE_DIR, EMBEDDING_DIM, MAX_NB_WORDS, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
+from simple_configs import EMBEDDING_DIM, VOCAB_SIZE, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
 class EmbeddingHolder(object):
 
 	def __init__(self):
-		self.log = open(LOG_FILE_DIR, "a")
 		self.embedding_matrix = None
 		try:
 			self.embedding_matrix = np.load(EMBEDDING_MAT_DIR)
 		except Exception as e:
-			self.log.write('\ncould not find premade embeddings matrix. creating it...')
+			print 'Could not find premade embeddings matrix. creating it...'
 		if self.embedding_matrix is None: 
 			self.build_embeddings_mat()
 
@@ -33,13 +32,13 @@ class EmbeddingHolder(object):
 			word_index[word] = i if word not in word_index else word_index[word]
 
 		# prepare embedding matrix
-		self.embedding_matrix = np.zeros((MAX_NB_WORDS, EMBEDDING_DIM))
+		self.embedding_matrix = np.zeros((VOCAB_SIZE, EMBEDDING_DIM))
 		for word, i in word_index.iteritems():
-			if i >= MAX_NB_WORDS: continue
+			if i >= VOCAB_SIZE: continue
 			embedding_vector = embeddings_index[word]
 			if embedding_vector is not None:
 				self.embedding_matrix[i] = embedding_vector
-		self.log.write('\nPrepared embedding matrix.')
+		print 'Prepared embedding matrix.'
 
 		np.save(EMBEDDING_MAT_DIR, self.embedding_matrix)
 
