@@ -38,7 +38,7 @@ class DataHolder:
 		self.selected_passage = h5f['selected_passage']
 		self.data_size = self.q_data.shape[0] if MAX_DATA_SIZE == -1 else min(MAX_DATA_SIZE, self.q_data.shape[0])
 
-		self.start_token = self.build_start_token(batch_size)
+		self.start_token = self.build_start_token()
 
 		self.start_iter = 0
 
@@ -74,6 +74,7 @@ class DataHolder:
 
 		for entry_num, p_l in enumerate(passages_list):
 			for passage_num, passage in enumerate(p_l):
+				if passage_num >= MAX_NUM_PASSAGES: break
 				# padding
 				if len(passage) < PASSAGE_MAX_LENGTH and passage_num < MAX_NUM_PASSAGES:
 					pad = [PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage))
@@ -122,7 +123,7 @@ class DataHolder:
 			return None
 
 		start = self.start_iter
-		end = min(self.data_size, self.start_iter + batch_size)
+		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
 		
 		self.start_iter += batch_size
@@ -159,16 +160,16 @@ class DataHolder:
 if __name__ == "__main__":
 	data_module = DataHolder('train')
 	print 'Lets check out data set'
-	print 'Length of Q_data: ', data_module.Q_data.shape
-	print 'Length of P_data ', data_module.P_data.shape
-	print 'Length of A_data ', data_module.A_data.shape
+	print 'Length of Q_data: ', data_module.q_data.shape
+	print 'Length of P_data ', data_module.p_data.shape
+	print 'Length of A_data ', data_module.a_data.shape
 	print 'Length of Start Token ', data_module.start_token.shape
 	print 'Data Size ', data_module.data_size
 
 	print 'Making batch predicting'
-	print data_module.get_batch(True)
+	print len(data_module.get_batch(True))
 	print 'Making batch testing'
-	print data_module.get_batch(False)
+	print len(data_module.get_batch(False))
 
 
 

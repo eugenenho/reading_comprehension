@@ -26,7 +26,7 @@ class TFModel(Model):
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
-        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None,), name="starter_token")
+        self.start_token_placeholder = tf.placeholder(tf.int32, shape=(None,), name="starter_token")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, dropout=0.5, answers_batch=None):
