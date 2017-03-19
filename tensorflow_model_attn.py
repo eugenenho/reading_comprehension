@@ -243,7 +243,7 @@ if __name__ == "__main__":
         # tensorboard code
         merged = tf.summary.merge_all()
 
-        tf.global_variables_initializer().run()
+        # tf.global_variables_initializer().run()
         # end of tensorboard code
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
