@@ -207,7 +207,7 @@ class TFModel(Model):
             q_batch = batch['question']
             p_batch = batch['passage']
             s_t_batch = batch['start_token']
-            a_batch = np.zeros(q_batch.shape[0], OUTPUT_MAX_LENGTH)
+            a_batch = np.zeros((q_batch.shape[0], OUTPUT_MAX_LENGTH), dtype=np.int32)
             dropout = batch['dropout']
 
             prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
