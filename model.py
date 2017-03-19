@@ -79,7 +79,7 @@ class Model(object):
             q_batch = batch['question']
             p_batch = batch['passage']
             s_t_batch = batch['start_token']
-            droput = batch['dropout']
+            dropout = batch['dropout']
 
             prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch, dropout)
             preds.append(prediction)
