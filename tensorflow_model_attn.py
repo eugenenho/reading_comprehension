@@ -124,8 +124,8 @@ class TFModel(Model):
             
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
-                U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
+                # U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+                # b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
                 tf.summary.scalar('dropout_keep_probability', self.dropout_placeholder)
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
