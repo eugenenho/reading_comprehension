@@ -115,16 +115,19 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
                 # if self.predicting:
-                inp = tf.argmax(tf.nn.softmax(y_t), 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                inp_index = tf.argmax(tf.nn.softmax(y_t), 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
                 # else: 
                 #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
                 #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
                 #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
-
                 tf.get_variable_scope().reuse_variables()
+                if inp_index == END_ID: break
+
+            for i in range(OUTPUT_MAX_LENGTH - len(preds)):
+                preds.append(tf.zeros(y_t.shape[0], VOCAB_SIZE))
 
             packed_preds = tf.pack(preds, axis=2)
             preds = tf.transpose(packed_preds, perm=[0, 2, 1])
@@ -132,21 +135,28 @@ class TFModel(Model):
 
     def add_loss_op(self, preds):
         y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
-        
-        # CREATE MASKS HERE
-        index_maxs = tf.argmax(preds, axis=2)
-        all_stop_toke_matrix = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + END_ID
-        stop_token_index = tf.to_int32( tf.equal(index_maxs, all_stop_toke_matrix) )
-        valid_answer_length = tf.to_int32( tf.argmax(stop_token_index, axis=1) + 1 )
-        masks = tf.sequence_mask(valid_answer_length, OUTPUT_MAX_LENGTH)
+        y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
 
-        #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+        # CREATE MASKS HERE
+        # index_maxs = tf.argmax(preds, axis=2)
+        # all_stop_toke_matrix = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + END_ID
+        # stop_token_index = tf.to_int32( tf.equal(index_maxs, all_stop_toke_matrix) )
+        # valid_answer_length = tf.to_int32( tf.argmax(stop_token_index, axis=1) + 1 )
+        # masks = tf.cast( tf.sequence_mask(valid_answer_length, OUTPUT_MAX_LENGTH), tf.float32 )
+        # print 'before masks applied:', masks, preds
+
+        # masked_preds = tf.multiply(masks, tf.transpose(preds, perm=[0, 2, 1]) )#tf.boolean_mask(preds, masks)
+        # print 'masked', masked_preds
+
+        preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
+
+        print y, preds
+        loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
+        # loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
         # apply masks
-        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
 
-        loss = tf.reduce_mean(masked_loss_mat)
+        loss = tf.reduce_mean(loss_mat)
         return loss
 
     def add_training_op(self, loss):        
