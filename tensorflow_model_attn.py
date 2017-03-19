@@ -191,7 +191,8 @@ if __name__ == "__main__":
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
-
+    train_writer.close()
+    test_writer.close()
     model.log.close()
 
 
