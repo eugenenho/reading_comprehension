@@ -149,9 +149,8 @@ class DataHolder:
 
 		
 		for i in range(batch_size):
-			sel = selected_passage[i]
-			passages_mat[i] = all_passages[i][sel]  #  grab the sel'th out of [None x 10 x passage_max_length]
-
+			sel = int(selected_passage[i])
+			passages_mat[i] = all_passages[i][sel]
 		full_batch['passage'] = passages_mat
 		full_batch['selected_passage'] = None
 		return full_batch

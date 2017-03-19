@@ -104,8 +104,8 @@ class TFModel(Model):
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
             # U and b for manipulating the output from LSTM to logit (LSTM output -> logit)
-            U = tf.get_variable('U', shape=(d_cell_dim, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-            b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
+            U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+            b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
             
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
