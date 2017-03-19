@@ -13,6 +13,19 @@ import get_predictions
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
 
 class TFModel(Model):
+
+    def variable_summaries(var):
+      """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+        with tf.name_scope('summaries'):
+            mean = tf.reduce_mean(var)
+            tf.summary.scalar('mean', mean)
+            with tf.name_scope('stddev'):
+                stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+                tf.summary.scalar('stddev', stddev)
+                tf.summary.scalar('max', tf.reduce_max(var))
+                tf.summary.scalar('min', tf.reduce_min(var))
+                tf.summary.histogram('histogram', var)
+
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
@@ -97,6 +110,7 @@ class TFModel(Model):
 
                 U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
                 b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
+                tf.summary.scalar('dropout_keep_probability', self.dropout_placeholder)
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
@@ -132,6 +146,7 @@ class TFModel(Model):
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
 
         loss = tf.reduce_mean(masked_loss_mat)
+        tf.summary.scalar('cross_entropy_loss', cross_entropy)
         return loss
 
     def add_training_op(self, loss):        
@@ -152,13 +167,19 @@ if __name__ == "__main__":
         start = time.time()
         model = TFModel(embeddings)
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
-
+        # tensorboard code
+        merged = tf.summary.merge_all()
+        train_writer = tf.summary.FileWriter(FLAGS.log_dir + '/train', sess.graph)
+        test_writer = tf.summary.FileWriter(FLAGS.log_dir + '/test')
+        tf.global_variables_initializer().run()
+        # end of tensorboard code
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
         model.log.write('\ninitialzed variables')
         config = tf.ConfigProto()
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
+
         with tf.Session(config=config) as session:
             session.run(init)
             model.log.write('\nran init, fitting.....')
