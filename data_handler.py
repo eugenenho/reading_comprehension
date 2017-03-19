@@ -223,6 +223,8 @@ class DataHolder:
 				'dropout' : DROPOUT if not predicting else 1
 				}
 
+	def reset_iter(self):
+		self.start_iter = 0
 
 if __name__ == "__main__":
 	data_module = DataHolder('train')
