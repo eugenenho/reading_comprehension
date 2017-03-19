@@ -75,7 +75,7 @@ class DataHolder:
 		for entry_num, p_l in enumerate(passages_list):
 			for passage_num, passage in enumerate(p_l):
 				# padding
-				if len(passage) < PASSAGE_MAX_LENGTH:
+				if len(passage) < PASSAGE_MAX_LENGTH and passage_num < MAX_NUM_PASSAGES:
 					pad = [PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage))
 					passage.extend(pad)
 
