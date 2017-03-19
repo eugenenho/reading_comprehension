@@ -5,7 +5,7 @@ import numpy as np
 from model import Model
 
 from embeddings_handler import EmbeddingHolder
-from tf_data_handler import TFDataHolder
+from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 import get_predictions
@@ -26,10 +26,10 @@ class TFModel(Model):
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
-        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None, EMBEDDING_DIM), name="starter_token")
+        self.start_token_placeholder = tf.placeholder(tf.float32, shape=(None,), name="starter_token")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, answers_batch=None, dropout=0.5):
+    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, dropout=0.5, answers_batch=None):
         """Creates the feed_dict for the model.
         NOTE: You do not have to do anything here.
         """
@@ -160,7 +160,7 @@ class TFModel(Model):
 
 if __name__ == "__main__":
     print 'Starting, and now printing to log.txt'
-    data = TFDataHolder('train')
+    data = DataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
     with tf.Graph().as_default():
         start = time.time()
