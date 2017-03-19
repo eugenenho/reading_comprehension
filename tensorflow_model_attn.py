@@ -12,6 +12,12 @@ import get_predictions
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
 
+PAD_ID = 0
+STR_ID = 1
+END_ID = 2
+SOS_ID = 3
+UNK_ID = 4
+
 class TFModel(Model):
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
@@ -41,15 +47,17 @@ class TFModel(Model):
         return embeddings
 
     def seq_length(self, sequence):
-        used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))
+        # used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))
+        used = tf.sign(sequence)
         length = tf.reduce_sum(used, reduction_indices=1)
         length = tf.cast(length, tf.int32)
         return length
 
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
-        self.attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states)
+        
         with tf.variable_scope(scope, reuse):
-            o, final_state = tf.nn.dynamic_rnn(self.attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states)
+            o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
     def add_prediction_op(self): 
@@ -59,10 +67,11 @@ class TFModel(Model):
         # Question encoder
         with tf.variable_scope("question"): 
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(questions))
+            q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
         # Passage encoder
-        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(passages), q_outputs)
+        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
+ 
 
         # with tf.variable_scope("passage"):
         #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
@@ -71,7 +80,7 @@ class TFModel(Model):
         # Attention state encoder
         with tf.variable_scope("attention"): 
             a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32)
+            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
         q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
         p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
@@ -80,27 +89,31 @@ class TFModel(Model):
        
         preds = list()
         
-        with tf.variable_scope("decode"):
+        with tf.variable_scope("decoder"):
             d_cell_dim = 3*HIDDEN_DIM
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
-            # Make starter token input
-            inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, VOCAB_SIZE]
+            # Create first-time-step input to LSTM (starter token)
+            #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
+            inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
+
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
+            # U and b for manipulating the output from LSTM to logit (LSTM output -> logit)
+            U = tf.get_variable('U', shape=(d_cell_dim, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+            b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
+            
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
-                U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
-                # if self.testing:
+                # if self.predicting:
                 inp = tf.argmax(tf.nn.softmax(y_t), 1)
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
                 # else: 
@@ -120,13 +133,14 @@ class TFModel(Model):
         y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
         
         # CREATE MASKS HERE
-        index_maxs = tf.argmax(preds, 2)
-        check = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + 2
-        stop_tokens = tf.to_int32( tf.equal(index_maxs, check) )
-        stop_token_index = tf.to_int32( tf.argmax(stop_tokens, 1) + 1 )
-        masks = tf.sequence_mask(stop_token_index, OUTPUT_MAX_LENGTH)
+        index_maxs = tf.argmax(preds, axis=2)
+        all_stop_toke_matrix = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + END_ID
+        stop_token_index = tf.to_int32( tf.equal(index_maxs, all_stop_toke_matrix) )
+        valid_answer_length = tf.to_int32( tf.argmax(stop_token_index, axis=1) + 1 )
+        masks = tf.sequence_mask(valid_answer_length, OUTPUT_MAX_LENGTH)
 
-        loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
+        #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
+        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
         # apply masks
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
@@ -138,8 +152,8 @@ class TFModel(Model):
         train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
         return train_op
 
-    def __init__(self, embeddings, testing=False):
-        self.testing = testing
+    def __init__(self, embeddings, predicting=False):
+        self.predicting = predicting
         self.pretrained_embeddings = tf.Variable(embeddings)
         self.log = open(LOG_FILE_DIR, "a")
         self.build()
