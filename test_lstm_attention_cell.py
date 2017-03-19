@@ -1,12 +1,7 @@
-import time
 import tensorflow as tf
-import numpy as np
-
-from progbar import Progbar
 
 from tf_lstm_attention_cell import LSTMAttnCell
-
-from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
+from simple_configs import TRAIN_BATCH_SIZE, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, HIDDEN_DIM
 
 
 class Test():
@@ -19,7 +14,7 @@ class Test():
             d_cell = LSTMAttnCell(HIDDEN_DIM, encoder_output) # Make decoder cell with hidden dim
 
             # Make starter token input
-            inp = tf.ones([TRAIN_BATCH_SIZE, 1000]) # STARTER TOKEN, SHAPE: [BATCH, MAX_NB_WORDS]
+            inp = tf.ones([TRAIN_BATCH_SIZE, 1000]) # STARTER TOKEN, SHAPE: [BATCH, VOCAB_SIZE]
             
             # make initial state for LSTM cell
             h_0 = tf.ones([TRAIN_BATCH_SIZE, HIDDEN_DIM]) # hidden state from passage and question
@@ -29,10 +24,10 @@ class Test():
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
-                U = tf.get_variable('U', shape=(2 * HIDDEN_DIM, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
+                U = tf.get_variable('U', shape=(2 * HIDDEN_DIM, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+                b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
-                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
+                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
                 inp = y_t
 

@@ -4,7 +4,7 @@ import cPickle
 import h5py
 
 from sklearn.preprocessing import OneHotEncoder
-from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, EMBEDDING_DIM, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_DATA_SIZE
+from simple_configs import LOG_FILE_DIR, TRAIN_BATCH_SIZE, EMBEDDING_DIM, OUTPUT_MAX_LENGTH, VOCAB_SIZE, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_DATA_SIZE
 
 PAD_ID = 0
 END_ID = 1
@@ -53,6 +53,7 @@ class TFDataHolder:
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
 		Q_data = np.where(Q_data < MAX_NB_WORDS, Q_data, UNK_ID)
+
 		np.save("./data/marco/" + self.data_set + ".data.q_data", Q_data)
 
 		self.log.write('\nbuilt q data')
@@ -72,7 +73,9 @@ class TFDataHolder:
 					passage.extend([PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage)) )
 
 				P_data[i] = np.array(passage[:PASSAGE_MAX_LENGTH])
+
 		P_data = np.where(P_data < MAX_NB_WORDS, P_data, UNK_ID)
+  
 		np.save("./data/marco/" + self.data_set + ".data.p_data", P_data)
 
 		self.log.write('\nbuilt p data')
@@ -90,8 +93,9 @@ class TFDataHolder:
 			if len(ans) < OUTPUT_MAX_LENGTH: ans.extend( [END_ID] + [PAD_ID] * pad_len )
 			# add to matrix
 			A_data[i] = np.array(ans[:OUTPUT_MAX_LENGTH])
-
+      
 		A_data = np.where(A_data < MAX_NB_WORDS, A_data, UNK_ID)
+
 		np.save("./data/marco/" + self.data_set + ".data.a_data", A_data)
 
 		self.log.write('\nbuilt y data')

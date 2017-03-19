@@ -2,7 +2,7 @@ import time
 import tensorflow as tf
 import numpy as np
 
-from progbar import Progbar
+from model import Model
 
 from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
@@ -10,7 +10,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 import get_predictions
 
-from simple_configs import LOG_FILE_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, MAX_NB_WORDS, LEARNING_RATE, DEPTH, HIDDEN_DIM, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR, PRED_BATCH_SIZE
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
 
 PAD_ID = 0
 STR_ID = 1
@@ -18,9 +18,7 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
-# MASKING AND DROPOUT!!!, and save as we go, and data memory handling
-
-class TFModel():
+class TFModel(Model):
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
@@ -94,10 +92,11 @@ class TFModel():
         with tf.variable_scope("decoder"):
             d_cell_dim = 3*HIDDEN_DIM
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
- 
+
             # Create first-time-step input to LSTM (starter token)
             #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
+
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -112,7 +111,7 @@ class TFModel():
                 o_t, h_t = d_cell(inp, h_t)
 
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
-                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, MAX_NB_WORDS]
+                y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
                 # if self.predicting:
                 inp = tf.argmax(tf.nn.softmax(y_t), 1)
@@ -131,7 +130,7 @@ class TFModel():
         return preds
 
     def add_loss_op(self, preds):
-        y = tf.one_hot(self.answers_placeholder, MAX_NB_WORDS)
+        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
         
         # CREATE MASKS HERE
         index_maxs = tf.argmax(preds, axis=2)
@@ -152,83 +151,6 @@ class TFModel():
     def add_training_op(self, loss):        
         train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
         return train_op
-
-    def train_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, answers_batch):
-        """Perform one step of gradient descent on the provided batch of data."""
-        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, answers_batch=answers_batch)
-        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-        return loss
-
-    def run_epoch(self, sess, data):
-        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
-        
-        losses = list()
-        i = 0
-        batch = data.get_batch()
-        while batch is not None:
-            q_batch = batch[0]
-            p_batch = batch[1]
-            a_batch = batch[2]
-            s_t_batch = batch[3]
-
-            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, a_batch)
-            losses.append(loss)
-
-            prog.update(i + 1, [("train loss", loss)])
-
-            batch = data.get_batch()
-            if i % 1200 == 0 and i > 0:
-                self.log.write('\nNow saving file...')
-                saver.save(sess, './data/model.weights')
-                self.log.write('\nSaved...')
-            i += 1
-        return losses
-
-    def fit(self, sess, saver, data):
-        losses = []
-        for epoch in range(NUM_EPOCS):
-            self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
-            loss = self.run_epoch(sess, data)
-            losses.append(loss)
-            saver.save(sess, './data/model.weights')
-        return losses
-
-    def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
-        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch)
-        print 'feed', feed
-        predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
-        predictions = np.argmax(predictions, axis=2)
-        return predictions
-
-    def predict(self, sess, saver, data):
-        self.predicting = False
-        prog = Progbar(target=1 + int(data.data_size / PRED_BATCH_SIZE), file_given=self.log)
-        
-        preds = list()
-        i = 0
-        
-        batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
-        print 'batch', batch
-        while batch is not None:
-            q_batch = batch[0]
-            p_batch = batch[1]
-            s_t_batch = batch[3]
-
-            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch)
-            preds.append(prediction)
-
-            prog.update(i + 1, [("Predictions going...", 1)])
-
-            batch = data.get_batch(batch_size=PRED_BATCH_SIZE)
-            i += 1
-
-        return preds
-
-    def build(self):
-        self.add_placeholders()
-        self.pred = self.add_prediction_op()
-        self.loss = self.add_loss_op(self.pred)
-        self.train_op = self.add_training_op(self.loss)
 
     def __init__(self, embeddings, predicting=False):
         self.predicting = predicting
@@ -260,7 +182,7 @@ if __name__ == "__main__":
             preds = model.predict(session, saver, data)
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
-            get_predictions.build_json_file(preds, 'train' + '_preds.json')
+            get_predictions.build_json_file(preds, './data/train_preds.json')
 
 
     model.log.close()

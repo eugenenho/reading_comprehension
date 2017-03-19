@@ -11,6 +11,8 @@ Authors : Tri Nguyen <trnguye@microsoft.com>, Xia Song <xiaso@microsoft.com>, To
 """
 
 from __future__ import print_function
+from __future__ import with_statement
+from __future__ import unicode_literals
 
 import json
 import sys
@@ -23,6 +25,9 @@ QUERY_ID_JSON_ID = 'query_id'
 ANSWERS_JSON_ID = 'answers'
 NLP = None
 MAX_BLEU_ORDER = 4
+
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 def normalize_batch(p_iter, p_batch_size=1000, p_thread_count=5):
     """Normalize and tokenize strings.
@@ -66,7 +71,7 @@ def load_file(p_path_to_data):
     all_answers = []
     query_ids = []
     no_answer_query_ids = set()
-    with open(p_path_to_data, 'r') as data_file: # , encoding='utf-8'
+    with open(p_path_to_data, 'r') as data_file:
         for line in data_file:
             try:
                 json_object = json.loads(line)
