@@ -21,7 +21,8 @@ UNK_ID = 4
 class TFModel(Model):
 
     def variable_summaries(var):
-      """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+        """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+        
         with tf.name_scope('summaries'):
             mean = tf.reduce_mean(var)
             tf.summary.scalar('mean', mean)
