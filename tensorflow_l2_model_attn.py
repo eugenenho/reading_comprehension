@@ -93,10 +93,11 @@ class TFModel(Model):
         with tf.variable_scope("decoder"):
             d_cell_dim = 3*HIDDEN_DIM
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
- 
+
             # Create first-time-step input to LSTM (starter token)
             #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
+
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -113,14 +114,13 @@ class TFModel(Model):
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
-
-                # if self.predicting:
-                inp_index = tf.argmax(y_t, 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                # else: 
-                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                if self.predicting:
+                    inp_index = tf.argmax(y_t, 1)
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                else: 
+                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -130,16 +130,24 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
-        masks = tf.Print(masks, [masks], message='Masks:', first_n=5, summarize=OUTPUT_MAX_LENGTH)
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-        loss_mat = tf.Print(loss_mat, [loss_mat], message='loss_mat:', first_n=5, summarize=OUTPUT_MAX_LENGTH)
-        print loss_mat
-        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-        print masked_loss_mat
-        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message='masked_loss_mat:', first_n=5, summarize=TRAIN_BATCH_SIZE)
-        loss = tf.reduce_mean(masked_loss_mat)
-        loss = tf.Print(loss, [loss], message='loss:', first_n=5)
+        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
+        
+        ans_lengths = self.seq_length(self.answers_placeholder)
+        mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
+        mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
+        base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
+        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.float32)
+
+        y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
+        preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
+
+        # or bool mask
+        masked_preds = tf.multiply(preds, full_masks)
+        masked_y = tf.multiply(y, full_masks)
+
+        # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
+        loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
+        loss = tf.reduce_mean(loss_mat)
         return loss
 
     def add_training_op(self, loss):        
@@ -238,7 +246,6 @@ if __name__ == "__main__":
 
 
     model.log.close()
-
 
 
 
