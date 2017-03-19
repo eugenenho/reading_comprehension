@@ -180,7 +180,7 @@ class TFModel(Model):
             i += 1
         return losses
 
-   def predict(self, sess, saver, data):
+    def predict(self, sess, saver, data):
         self.predicting = True
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
