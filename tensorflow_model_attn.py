@@ -113,9 +113,9 @@ class TFModel(Model):
 
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
-
+                y_t = tf.nn.softmax(y_t)
                 # if self.predicting:
-                inp_index = tf.argmax(tf.nn.softmax(y_t), 1)
+                inp_index = tf.argmax(y_t, 1)
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
                 # else: 
                 #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
@@ -124,10 +124,6 @@ class TFModel(Model):
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
-                if inp_index == END_ID: break
-
-            for i in range(OUTPUT_MAX_LENGTH - len(preds)):
-                preds.append(tf.zeros(y_t.shape[0], VOCAB_SIZE))
 
             packed_preds = tf.pack(preds, axis=2)
             preds = tf.transpose(packed_preds, perm=[0, 2, 1])
@@ -135,27 +131,21 @@ class TFModel(Model):
 
     def add_loss_op(self, preds):
         y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
+        
+        ans_lengths = self.seq_length(self.answers_placeholder)
+        mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
+        mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
+        base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
+        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.bool)
+
         y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
-
-        # CREATE MASKS HERE
-        # index_maxs = tf.argmax(preds, axis=2)
-        # all_stop_toke_matrix = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + END_ID
-        # stop_token_index = tf.to_int32( tf.equal(index_maxs, all_stop_toke_matrix) )
-        # valid_answer_length = tf.to_int32( tf.argmax(stop_token_index, axis=1) + 1 )
-        # masks = tf.cast( tf.sequence_mask(valid_answer_length, OUTPUT_MAX_LENGTH), tf.float32 )
-        # print 'before masks applied:', masks, preds
-
-        # masked_preds = tf.multiply(masks, tf.transpose(preds, perm=[0, 2, 1]) )#tf.boolean_mask(preds, masks)
-        # print 'masked', masked_preds
-
         preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
 
-        print y, preds
-        loss_mat = tf.nn.softmax_cross_entropy_with_logits(preds, y)
-        # loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+        masked_preds = tf.boolean_mask(preds, full_masks)
+        masked_y = tf.boolean_mask(y, full_masks)
 
-        # apply masks
-
+        # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
+        loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
         return loss
 
