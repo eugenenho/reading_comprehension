@@ -115,13 +115,13 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
 
-                if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                # if self.predicting:
+                inp_index = tf.argmax(y_t, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                # else: 
+                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -132,37 +132,16 @@ class TFModel(Model):
 
     def add_loss_op(self, preds):
         masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
-        print 'masks', masks
+        masks = tf.Print(masks, [masks], message='Masks:', first_n=5, summarize=OUTPUT_MAX_LENGTH)
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-        print 'loss_mat', loss_mat
+        loss_mat = tf.Print(loss_mat, [loss_mat], message='loss_mat:', first_n=5, summarize=OUTPUT_MAX_LENGTH)
+        print loss_mat
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-        print 'masked_loss:', masked_loss_mat
+        print masked_loss_mat
+        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message='masked_loss_mat:', first_n=5, summarize=TRAIN_BATCH_SIZE)
         loss = tf.reduce_mean(masked_loss_mat)
-        print 'loss', loss
+        loss = tf.Print(loss, [loss], message='loss:', first_n=5)
         return loss
-
-
-
-
-        '''
-        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
-        
-        # CREATE MASKS HERE
-        index_maxs = tf.argmax(preds, axis=2)
-        all_stop_toke_matrix = tf.zeros(tf.shape(index_maxs), dtype=tf.int64) + END_ID
-        stop_token_index = tf.to_int32( tf.equal(index_maxs, all_stop_toke_matrix) )
-        valid_answer_length = tf.to_int32( tf.argmax(stop_token_index, axis=1) + 1 )
-        masks = tf.sequence_mask(valid_answer_length, OUTPUT_MAX_LENGTH)
-
-        #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, labels=self.answers_placeholder)
-
-        # apply masks
-        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-
-        loss = tf.reduce_mean(masked_loss_mat)
-        return loss
-        '''
 
     def add_training_op(self, loss):        
         train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)

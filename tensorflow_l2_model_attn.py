@@ -114,13 +114,13 @@ class TFModel(Model):
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
-                # if self.predicting:
-                inp_index = tf.argmax(y_t, 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                # else: 
-                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                if self.predicting:
+                    inp_index = tf.argmax(y_t, 1)
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                else: 
+                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -136,13 +136,14 @@ class TFModel(Model):
         mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
         mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
         base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
-        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.bool)
+        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.float32)
 
         y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
         preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
 
-        masked_preds = tf.boolean_mask(preds, full_masks)
-        masked_y = tf.boolean_mask(y, full_masks)
+        # or bool mask
+        masked_preds = tf.multiply(preds, full_masks)
+        masked_y = tf.multiply(y, full_masks)
 
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
@@ -179,21 +180,23 @@ class TFModel(Model):
             i += 1
         return losses
 
-    def predict(self, sess, saver, data):
-        self.testing = False
+   def predict(self, sess, saver, data):
+        self.predicting = True
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         preds = list()
         i = 0
         
+        data.reset_iter()
         batch = data.get_selected_passage_batch(predicting=True)
         while batch is not None:
             q_batch = batch['question']
             p_batch = batch['passage']
             s_t_batch = batch['start_token']
+            a_batch = np.zeros((q_batch.shape[0], OUTPUT_MAX_LENGTH), dtype=np.int32)
             dropout = batch['dropout']
 
-            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch, dropout)
+            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
             preds.append(prediction)
 
             prog.update(i + 1, [("Predictions going...", 1)])
@@ -203,8 +206,8 @@ class TFModel(Model):
 
         return preds
 
-    def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout):
-        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout)
+    def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
+        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
         predictions = np.argmax(predictions, axis=2)
         return predictions
