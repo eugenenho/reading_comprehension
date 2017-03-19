@@ -147,20 +147,15 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
 
         vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
         print("Vocabulary size: %d" % len(vocab_list))
+<<<<<<< HEAD
         print(vocab_list)
+=======
+        # print(vocab_list)
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 
         with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
             for w in vocab_list:
                 vocab_file.write(w + b"\n")
-
-"""
-def sentence_to_token_ids(sentence, vocabulary, tokenizer=None):
-    if tokenizer:
-        words = tokenizer(sentence)
-    else:
-        words = basic_tokenizer(sentence)
-    return [vocabulary.get(w, UNK_ID) for w in words]
-"""
 
 def data_to_token_ids(data_path, target_path, vocabulary_path,
                       tokenizer=None):
@@ -202,7 +197,7 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
             list_of_lists_ids.append(token_id_list)
         
         print("processing: ", data_path)
-        print("list_of_lists_ids", list_of_lists_ids)
+        # print("list_of_lists_ids", list_of_lists_ids)
 
         with open(target_path, "wb") as target_file:
             cPickle.dump(list_of_lists_ids, target_file, -1)
@@ -228,7 +223,11 @@ if __name__ == '__main__':
     # ======== Trim Distributed Word Representation =======
     # If you use other word representations, you should change the code below
 
+<<<<<<< HEAD
     process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
+=======
+    # process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 
     # ======== Creating Dataset =========
     # We created our data files seperately
@@ -284,21 +283,3 @@ if __name__ == '__main__':
         for j in range(len(passages_ids[i])):
             print(i, "-", j, "\t", passages[i][j])
             print(i, "-", j, "\t", passages_ids[i][j])
-
-    """    
-    for i, question in enumerate(questions):
-        print(i)
-        print(questions[i])
-        print(questions_ids[i])
-    """
-    """
-    print ("Testing the output pkl : val\n")
-    with open(os.path.join(data_prefix, 'val.question.pkl'), 'rb') as question_file, \
-        open(os.path.join(data_prefix, 'val.answer.pkl'), 'rb') as answer_file :
-        questions = cPickle.load(question_file)
-        answers = cPickle.load(answer_file)
-
-    for i, question in enumerate(questions):
-        print(question, " :: ", answers[i]) 
-    """   
-    
