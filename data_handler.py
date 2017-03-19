@@ -3,7 +3,7 @@ import numpy as np
 import cPickle
 import h5py
 
-from simple_configs import TRAIN_BATCH_SIZE, EMBEDDING_DIM, VOCAB_SIZE, OUTPUT_MAX_LENGTH, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_NUM_PASSAGES, MAX_DATA_SIZE, DROPOUT
+from simple_configs import TRAIN_BATCH_SIZE, EMBEDDING_DIM, VOCAB_SIZE, OUTPUT_MAX_LENGTH, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_NUM_PASSAGES, MAX_DATA_SIZE, DROPOUT, SMALL_DATA_SET
 
 PAD_ID = 0
 STR_ID = 1
@@ -167,6 +167,16 @@ class DataHolder:
 		batch_size = end - self.start_iter
 		
 		self.start_iter += batch_size
+
+		if SMALL_DATA_SET:
+			return {
+				'question' : self.q_data[:batch_size], 
+				'passage' : self.p_data[:batch_size], 
+				'selected_passage' : self.selected_passage[:batch_size],
+				'answer' : self.a_data[:batch_size], 
+				'start_token' : self.start_token[:batch_size],
+				'dropout' : 1
+				}
 
 		return {
 				'question' : self.q_data[start:end], 
