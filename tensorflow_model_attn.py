@@ -242,8 +242,7 @@ if __name__ == "__main__":
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
         # tensorboard code
         merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter('tsboard/' + '/train', sess.graph)
-        test_writer = tf.summary.FileWriter('tsboard/' + '/test')
+
         tf.global_variables_initializer().run()
         # end of tensorboard code
         init = tf.global_variables_initializer()
@@ -254,6 +253,8 @@ if __name__ == "__main__":
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
 
         with tf.Session(config=config) as session:
+            train_writer = tf.summary.FileWriter('tsboard/' + '/train', session.graph)
+            test_writer = tf.summary.FileWriter('tsboard/' + '/test')
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
