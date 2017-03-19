@@ -17,7 +17,7 @@ class DataHolder:
 	def __init__(self, DATA_SET):
 		print '\nInitializing updated Data Holder'
 		self.data_set = str(DATA_SET).lower()
-		DATA_FILE = './data/marco_old/h5py-' +  self.data_set
+		DATA_FILE = './data/marco/h5py-' +  self.data_set
 
 		if not os.path.isfile(DATA_FILE):
 			h5f = h5py.File(DATA_FILE, 'w')
@@ -38,14 +38,14 @@ class DataHolder:
 		self.selected_passage = h5f['selected_passage']
 		self.data_size = self.q_data.shape[0] if MAX_DATA_SIZE == -1 else min(MAX_DATA_SIZE, self.q_data.shape[0])
 
-		self.start_token = self.build_start_token(batch_size)
+		self.start_token = self.build_start_token()
 
 		self.start_iter = 0
 
 
 	# This constructs the data from the pickled objects
 	def build_q_data(self):
-		questions_list = cPickle.load(open("./data/marco_old/" + self.data_set + ".ids.question.pkl","rb"))
+		questions_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.question.pkl","rb"))
 		self.data_size = len(questions_list)
 		q_data = np.zeros((self.data_size, QUESTION_MAX_LENGTH))
 		for i, question in enumerate(questions_list):
@@ -63,27 +63,31 @@ class DataHolder:
 
 	# This constructs the data from the pickled objects
 	def build_p_data(self):
-		passages_list = cPickle.load(open("./data/marco_old/" + self.data_set + ".ids.passage.pkl","rb"))
+		# doens't contain 'is selected'
+		passages_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.passage.pkl","rb"))
 
-		p_data = np.zeros((self.data_size, MAX_NUM_PASSAGES, PASSAGE_MAX_LENGTH))
-		selected_passage = np.zeros((self.data_size))
+		# Used only for is_selected
+		passage_words_list = cPickle.load(open("./data/marco/" + self.data_set + ".passage.pkl", "rb"))
+
+		p_data = np.zeros((self.data_size, MAX_NUM_PASSAGES, PASSAGE_MAX_LENGTH)) # [None x 10 x passage_max_length]
+		selected_passage = np.zeros((self.data_size))							  # [None]
 
 		for entry_num, p_l in enumerate(passages_list):
-			for passage_num, p_tup in enumerate(p_l):
-
-				is_selected = p_tup[0]
-				passage = p_tup[1]
-
+			for passage_num, passage in enumerate(p_l):
+				if passage_num >= MAX_NUM_PASSAGES: break
 				# padding
-				if len(passage) < PASSAGE_MAX_LENGTH:
+				if len(passage) < PASSAGE_MAX_LENGTH and passage_num < MAX_NUM_PASSAGES:
 					pad = [PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage))
 					passage.extend(pad)
 
 				# save which passsage is selected
-				if is_selected > 0:
-					selected_passage[entry_num] = passage_num
+				if passage_num < len(passage_words_list[entry_num]):
+					is_selected = passage_words_list[entry_num][passage_num]
+					if is_selected > 0:
+						selected_passage[entry_num] = passage_num
 
 				p_data[entry_num][passage_num] = np.array(passage[:PASSAGE_MAX_LENGTH])
+
 		# Replace vals > VOCAB_SIZE with unknown
 		p_data = np.where(p_data < VOCAB_SIZE, p_data, UNK_ID)
 
@@ -92,7 +96,7 @@ class DataHolder:
 
 
 	def build_a_data(self):
-		answers_list = cPickle.load(open("./data/marco_old/" + self.data_set + ".ids.answer.pkl","rb" ))
+		answers_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.answer.pkl","rb" ))
 		a_data = np.zeros((self.data_size, OUTPUT_MAX_LENGTH))
 		for i, ans in enumerate(answers_list):
 			# weird thing here, the answer is stores as a list of lists
@@ -113,13 +117,13 @@ class DataHolder:
 	def build_start_token(self):
 		return np.zeros((TRAIN_BATCH_SIZE)) + STR_ID
 
-	def get_batch(self, training=True):
+	def get_batch(self, predicting=False):
 		if self.start_iter >= self.data_size:
 			self.start_iter = 0
 			return None
 
 		start = self.start_iter
-		end = min(self.data_size, self.start_iter + batch_size)
+		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
 		
 		self.start_iter += batch_size
@@ -130,23 +134,23 @@ class DataHolder:
 				'selected_passage' : self.selected_passage[start:end],
 				'answer' : self.a_data[start:end], 
 				'start_token' : self.start_token[:batch_size],
-				'dropout' : DROPOUT if training else 1
+				'dropout' : DROPOUT if not predicting else 1
 				}
 
-	def get_selected_passage_batch(self, training=True):
-		full_batch = self.get_batch(training)
+	def get_selected_passage_batch(self, predicting=False):
+		full_batch = self.get_batch(predicting)
 		if full_batch is None: return None
 
 		all_passages = full_batch['passage']
 		selected_passage = full_batch['selected_passage']
 
 		batch_size = all_passages.shape[0]
+		passages_mat = np.zeros((batch_size, PASSAGE_MAX_LENGTH)) # [None x passage_max]
 
-		passages_mat = np.zeros((all_passages.shape[0], PASSAGE_MAX_LENGTH))
+		
 		for i in range(batch_size):
-			sel = selected_passage[i]
+			sel = int(selected_passage[i])
 			passages_mat[i] = all_passages[i][sel]
-
 		full_batch['passage'] = passages_mat
 		full_batch['selected_passage'] = None
 		return full_batch
@@ -155,16 +159,16 @@ class DataHolder:
 if __name__ == "__main__":
 	data_module = DataHolder('train')
 	print 'Lets check out data set'
-	print 'Length of Q_data: ', data_module.Q_data.shape
-	print 'Length of P_data ', data_module.P_data.shape
-	print 'Length of A_data ', data_module.A_data.shape
+	print 'Length of Q_data: ', data_module.q_data.shape
+	print 'Length of P_data ', data_module.p_data.shape
+	print 'Length of A_data ', data_module.a_data.shape
 	print 'Length of Start Token ', data_module.start_token.shape
 	print 'Data Size ', data_module.data_size
 
-	print 'Making batch training'
-	print data_module.get_batch(True)
+	print 'Making batch predicting'
+	print len(data_module.get_batch(True))
 	print 'Making batch testing'
-	print data_module.get_batch(False)
+	print len(data_module.get_batch(False))
 
 
 
