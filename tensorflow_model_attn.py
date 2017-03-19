@@ -163,7 +163,7 @@ class TFModel(Model):
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
 
         loss = tf.reduce_mean(masked_loss_mat)
-        tf.summary.scalar('cross_entropy_loss', cross_entropy)
+        tf.summary.scalar('cross_entropy_loss', loss)
         return loss
 
     def add_training_op(self, loss):        
