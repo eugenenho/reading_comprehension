@@ -6,10 +6,12 @@ from embeddings_handler import EmbeddingHolder
 from tf_data_handler import TFDataHolder
 from embeddings_handler import EmbeddingHolder
 
+from simple_configs import TEXT_DATA_DIR
+
 DATA_SET = 'train'
-MODEL_PATH = './data/Models/1direction_attn_lstm_with_embeddings_passed_in/model.weights'
 
 # ~~~ DOESN'T WORK ~~~
+# MODEL_PATH = './data/Models/1direction_attn_lstm_with_embeddings_passed_in/model.weights'
 # def get_preds(data, embeddings):
 # 	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
 # 	with tf.Graph().as_default():
