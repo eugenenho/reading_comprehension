@@ -39,17 +39,3 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
-
-<<<<<<< HEAD
-
-
-				# W_a : [2H x H]
-				# W_a = tf.get_variable('W_a', shape=(2 * HIDDEN_DIM, HIDDEN_DIM), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)				
-				# h_t_reshaped : [None x H]
-				# h_t_reshaped = tf.matmul(h_t, W_a)
-
-
-
-
-=======
->>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85

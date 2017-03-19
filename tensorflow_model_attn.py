@@ -18,11 +18,6 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
-<<<<<<< HEAD
-
-# MASKING AND DROPOUT!!!, and save as we go, and data memory handling
-=======
->>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 
 class TFModel(Model):
     def add_placeholders(self):
@@ -98,18 +93,10 @@ class TFModel(Model):
         with tf.variable_scope("decoder"):
             d_cell_dim = 3*HIDDEN_DIM
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
-<<<<<<< HEAD
  
             # Create first-time-step input to LSTM (starter token)
             #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
-=======
-
-            # Create first-time-step input to LSTM (starter token)
-            #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
-            inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
-
->>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -117,13 +104,8 @@ class TFModel(Model):
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
             # U and b for manipulating the output from LSTM to logit (LSTM output -> logit)
-<<<<<<< HEAD
-            U = tf.get_variable('U', shape=(d_cell_dim, MAX_NB_WORDS), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-            b = tf.get_variable('b', shape=(MAX_NB_WORDS, ), dtype=tf.float32)
-=======
             U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
             b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
->>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
             
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
@@ -197,13 +179,9 @@ class TFModel(Model):
         return losses
 
     def predict(self, sess, saver, data):
-<<<<<<< HEAD
+
         self.predicting = False
         prog = Progbar(target=1 + int(data.data_size / PRED_BATCH_SIZE), file_given=self.log)
-=======
-        self.testing = False
-        prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
->>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
         
         preds = list()
         i = 0
