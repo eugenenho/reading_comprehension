@@ -35,7 +35,7 @@ class Model(object):
             p_batch = batch['passage']
             a_batch = batch['answer']
             s_t_batch = batch['start_token']
-            droput = batch['dropout']
+            dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
             losses.append(loss)
