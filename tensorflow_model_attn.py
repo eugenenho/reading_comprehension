@@ -169,8 +169,8 @@ if __name__ == "__main__":
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
         # tensorboard code
         merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter(FLAGS.log_dir + '/train', sess.graph)
-        test_writer = tf.summary.FileWriter(FLAGS.log_dir + '/test')
+        train_writer = tf.summary.FileWriter('tsboard/' + '/train', sess.graph)
+        test_writer = tf.summary.FileWriter('tsboard/' + '/test')
         tf.global_variables_initializer().run()
         # end of tensorboard code
         init = tf.global_variables_initializer()
