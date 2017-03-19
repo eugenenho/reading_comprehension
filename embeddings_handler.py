@@ -37,7 +37,7 @@ class EmbeddingHolder(object):
 		f.close()
 
 		# prepare embedding matrix
-		self.embedding_matrix = np.random.randn((VOCAB_SIZE, EMBEDDING_DIM))
+		self.embedding_matrix = np.random.randn(VOCAB_SIZE, EMBEDDING_DIM)
 		for i, word in enumerate(word_list):
 			if i == 0:
 				self.embedding_matrix[i] = np.zeros((1, EMBEDDING_DIM))
