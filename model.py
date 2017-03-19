@@ -6,7 +6,7 @@ class Model(object):
     def add_placeholders(self):
         raise NotImplementedError("Each Model must re-implement this method.")
 
-    def create_feed_dict(self, inputs_batch, labels_batch=None):
+    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, dropout=0.5, answers_batch=None):
         raise NotImplementedError("Each Model must re-implement this method.")
 
     def add_prediction_op(self):
@@ -18,9 +18,9 @@ class Model(object):
     def add_training_op(self, loss):
         raise NotImplementedError("Each Model must re-implement this method.")
 
-    def train_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, answers_batch):
+    def train_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
-        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, answers_batch=answers_batch)
+        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch=answers_batch)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
 
@@ -29,19 +29,20 @@ class Model(object):
         
         losses = list()
         i = 0
-        batch = data.get_batch()
+        batch = data.get_selected_passage_batch()
         while batch is not None:
-            q_batch = batch[0]
-            p_batch = batch[1]
-            a_batch = batch[2]
-            s_t_batch = batch[3]
+            q_batch = batch['question']
+            p_batch = batch['passage']
+            a_batch = batch['answer']
+            s_t_batch = batch['start_token']
+            dropout = batch['dropout']
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, a_batch)
+            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
 
-            batch = data.get_batch()
+            batch = data.get_selected_passage_batch()
             if i % 1200 == 0 and i > 0:
                 self.log.write('\nNow saving file...')
                 saver.save(sess, SAVE_MODEL_DIR)
@@ -58,8 +59,8 @@ class Model(object):
             saver.save(sess, SAVE_MODEL_DIR)
         return losses
 
-    def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch):
-        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch)
+    def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout):
+        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout)
         print 'feed', feed
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
         predictions = np.argmax(predictions, axis=2)
@@ -72,19 +73,20 @@ class Model(object):
         preds = list()
         i = 0
         
-        batch = data.get_batch(batch_size=TRAIN_BATCH_SIZE)
+        batch = data.get_selected_passage_batch(predicting=True)
         print 'batch', batch
         while batch is not None:
-            q_batch = batch[0]
-            p_batch = batch[1]
-            s_t_batch = batch[3]
+            q_batch = batch['question']
+            p_batch = batch['passage']
+            s_t_batch = batch['start_token']
+            dropout = batch['dropout']
 
-            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch)
+            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch, dropout)
             preds.append(prediction)
 
             prog.update(i + 1, [("Predictions going...", 1)])
 
-            batch = data.get_batch(batch_size=TRAIN_BATCH_SIZE)
+            batch = data.get_selected_passage_batch(predicting=True)
             i += 1
 
         return preds

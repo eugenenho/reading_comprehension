@@ -4,6 +4,12 @@ from collections import defaultdict
 
 from simple_configs import EMBEDDING_DIM, VOCAB_SIZE, GLOVE_DIR, TEXT_DATA_DIR, EMBEDDING_MAT_DIR
 
+PAD_ID = 0
+STR_ID = 1
+END_ID = 2
+SOS_ID = 3
+UNK_ID = 4
+
 class EmbeddingHolder(object):
 
 	def __init__(self):
@@ -19,23 +25,24 @@ class EmbeddingHolder(object):
 		embeddings_index = defaultdict(lambda: None) # word -> embedding vector
 		f = open(os.path.join(GLOVE_DIR, 'glove.6B.' + str(EMBEDDING_DIM) + 'd.txt'))
 		for line in f:
-			values = line.split()
+			values = line.strip().split(' ')
 			word = values[0]
 			coefs = np.asarray(values[1:], dtype='float32')
 			embeddings_index[word] = coefs
 		f.close()
 
-		word_index = {}  # dictionary mapping label name to numeric id
+
 		f = open(TEXT_DATA_DIR)
-		for i, line in enumerate(f):
-			word = line.lower().strip()
-			word_index[word] = i if word not in word_index else word_index[word]
+		word_list = [line.strip() for line in f][:VOCAB_SIZE]
+		f.close()
 
 		# prepare embedding matrix
-		self.embedding_matrix = np.zeros((VOCAB_SIZE, EMBEDDING_DIM))
-		for word, i in word_index.iteritems():
-			if i >= VOCAB_SIZE: continue
-			embedding_vector = embeddings_index[word]
+		self.embedding_matrix = np.random.randn(VOCAB_SIZE, EMBEDDING_DIM)
+		for i, word in enumerate(word_list):
+			if i == 0:
+				self.embedding_matrix[i] = np.zeros((1, EMBEDDING_DIM))
+				continue
+			embedding_vector = embeddings_index[word.lower()]
 			if embedding_vector is not None:
 				self.embedding_matrix[i] = embedding_vector
 		print 'Prepared embedding matrix.'

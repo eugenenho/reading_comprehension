@@ -147,7 +147,7 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
 
         vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
         print("Vocabulary size: %d" % len(vocab_list))
-        print(vocab_list)
+        # print(vocab_list)
 
         with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
             for w in vocab_list:
@@ -193,7 +193,7 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
             list_of_lists_ids.append(token_id_list)
         
         print("processing: ", data_path)
-        print("list_of_lists_ids", list_of_lists_ids)
+        # print("list_of_lists_ids", list_of_lists_ids)
 
         with open(target_path, "wb") as target_file:
             cPickle.dump(list_of_lists_ids, target_file, -1)
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     # ======== Trim Distributed Word Representation =======
     # If you use other word representations, you should change the code below
 
-    process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
+    # process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
 
     # ======== Creating Dataset =========
     # We created our data files seperately
