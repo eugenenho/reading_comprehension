@@ -21,10 +21,13 @@ class DataHolder:
 
 		if not os.path.isfile(DATA_FILE):
 			h5f = h5py.File(DATA_FILE, 'w')
-
 			h5f.create_dataset('q_data', data=self.build_q_data())
+			one_row_p = np.load('./data/marco/train.data.one_row_p.npy')
+			print one_row_p.shape
+			h5f.create_dataset('one_row_p', data=one_row_p)
 
-			p_data, selected_passage = self.build_p_data()		
+
+			p_data, selected_passage = self.build_p_data()
 			h5f.create_dataset('p_data', data=p_data)
 			h5f.create_dataset('selected_passage', data=selected_passage)
 
@@ -36,6 +39,7 @@ class DataHolder:
 		self.p_data = h5f['p_data']
 		self.a_data = h5f['a_data']
 		self.selected_passage = h5f['selected_passage']
+		self.one_row_p_data = h5f['one_row_p']
 		self.data_size = self.q_data.shape[0] if MAX_DATA_SIZE == -1 else min(MAX_DATA_SIZE, self.q_data.shape[0])
 
 		self.start_token = self.build_start_token()
@@ -92,6 +96,42 @@ class DataHolder:
 		p_data = np.where(p_data < VOCAB_SIZE, p_data, UNK_ID)
 
 		print 'built p data'
+		return p_data, selected_passage
+
+	# This constructs the data from the pickled objects
+	def build_one_row_p_data(self):
+		# doens't contain 'is selected'
+		passages_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.passage.pkl","rb"))
+
+		# Used only for is_selected
+		passage_words_list = cPickle.load(open("./data/marco/" + self.data_set + ".passage.pkl", "rb"))
+
+		p_data = np.zeros((self.data_size, PASSAGE_MAX_LENGTH * MAX_NUM_PASSAGES)) # [None x 10 x passage_max_length]
+		selected_passage = np.zeros((self.data_size))							  # [None]
+
+		for entry_num, p_l in enumerate(passages_list):
+			passages = []
+			for passage_num, p in enumerate(p_l):
+				if passage_num >= MAX_NUM_PASSAGES: break
+				passages.extend(p)
+				passages.append(END_ID)
+
+				# save which passsage is selected
+				if passage_num < len(passage_words_list[entry_num]):
+					is_selected = passage_words_list[entry_num][passage_num]
+					if is_selected > 0:
+						selected_passage[entry_num] = passage_num
+
+			passages.extend( [PAD_ID] * (MAX_NUM_PASSAGES * PASSAGE_MAX_LENGTH - len(passages)) )
+			passages_arr = np.array(passages[:PASSAGE_MAX_LENGTH * MAX_NUM_PASSAGES])
+			print passages_arr.shape, p_data.shape
+			p_data[entry_num] = passages_arr
+
+		# Replace vals > VOCAB_SIZE with unknown
+		p_data = np.where(p_data < VOCAB_SIZE, p_data, UNK_ID)
+		np.save("./data/marco/" + self.data_set + ".data.one_row_p", p_data)
+
+		print 'built one row p data'
 		return p_data, selected_passage
 
 
@@ -154,6 +194,24 @@ class DataHolder:
 		full_batch['passage'] = passages_mat
 		full_batch['selected_passage'] = None
 		return full_batch
+
+	def get_classifier_batch(self, predicting=False):
+		if self.start_iter >= self.data_size:
+			self.start_iter = 0
+			return None
+
+		start = self.start_iter
+		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
+		batch_size = end - self.start_iter
+		
+		self.start_iter += batch_size
+
+		return {
+				'question' : self.q_data[start:end], 
+				'passage' : self.one_row_p_data[start:end], 
+				'answer' : self.selected_passage[start:end], 
+				'dropout' : DROPOUT if not predicting else 1
+				}
 
 
 if __name__ == "__main__":
