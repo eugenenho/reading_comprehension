@@ -15,7 +15,7 @@ MAX_NUM_PASSAGES = 10
 # Embedding params
 VOCAB_SIZE = 20000#228999 #MAX VALUE
 EMBEDDING_DIM = 300
-MAX_DATA_SIZE = -1 #-1 to set no limit on data size
+MAX_DATA_SIZE = 2 #-1 to set no limit on data size
 
 # model params
 HIDDEN_DIM = 100
