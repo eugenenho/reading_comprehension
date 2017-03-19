@@ -141,7 +141,7 @@ class TFModel(Model):
         masks = tf.sequence_mask(valid_answer_length, OUTPUT_MAX_LENGTH)
 
         #loss_mat = tf.nn.softmax_cross_entropy_with_logits (preds, y)
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=preds, labels=self.answers_placeholder)
+        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
         # apply masks
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
