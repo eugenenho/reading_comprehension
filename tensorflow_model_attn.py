@@ -114,13 +114,13 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
 
-                # if self.predicting:
-                inp_index = tf.argmax(y_t, 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                # else: 
-                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                if self.predicting:
+                    inp_index = tf.argmax(y_t, 1)
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                else: 
+                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -130,16 +130,32 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
-        masks = tf.Print(masks, [masks], message='Masks:', first_n=5, summarize=OUTPUT_MAX_LENGTH)
+        masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
+
+        # print masks
+        # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
+        
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-        loss_mat = tf.Print(loss_mat, [loss_mat], message='loss_mat:', first_n=5, summarize=OUTPUT_MAX_LENGTH)
-        print loss_mat
-        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-        print masked_loss_mat
-        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message='masked_loss_mat:', first_n=5, summarize=TRAIN_BATCH_SIZE)
+
+        # print loss_mat
+        # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+        
+        # masked_loss_mat = tf.boolean_mask(loss_mat, masks)
+        masked_loss_mat = tf.multiply(loss_mat, masks)
+
+        # print masked_loss_mat
+        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+
+        masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
+
+        # print masked_loss_mat
+        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
+
         loss = tf.reduce_mean(masked_loss_mat)
-        loss = tf.Print(loss, [loss], message='loss:', first_n=5)
+
+        # print loss
+        # loss = tf.Print(loss, [loss], message="loss:")
+
         return loss
 
     def add_training_op(self, loss):        
