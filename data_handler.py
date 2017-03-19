@@ -38,7 +38,7 @@ class DataHolder:
 		self.selected_passage = h5f['selected_passage']
 		self.data_size = self.q_data.shape[0] if MAX_DATA_SIZE == -1 else min(MAX_DATA_SIZE, self.q_data.shape[0])
 
-		self.start_token = self.build_start_token(batch_size)
+		self.start_token = self.build_start_token()
 
 		self.start_iter = 0
 
@@ -74,6 +74,9 @@ class DataHolder:
 
 		for entry_num, p_l in enumerate(passages_list):
 			for passage_num, passage in enumerate(p_l):
+				
+				if passage_num >= MAX_NUM_PASSAGES: break
+				
 				# padding
 				if len(passage) < PASSAGE_MAX_LENGTH:
 					pad = [PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage))
@@ -92,7 +95,6 @@ class DataHolder:
 
 		print 'built p data'
 		return p_data, selected_passage
-
 
 	def build_a_data(self):
 		answers_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.answer.pkl","rb" ))
@@ -122,7 +124,7 @@ class DataHolder:
 			return None
 
 		start = self.start_iter
-		end = min(self.data_size, self.start_iter + batch_size)
+		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
 		
 		self.start_iter += batch_size
