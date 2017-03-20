@@ -240,6 +240,7 @@ if __name__ == "__main__":
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
+            print 'logging preds, just in case:', preds
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
