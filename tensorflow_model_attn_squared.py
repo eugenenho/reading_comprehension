@@ -59,17 +59,8 @@ class TFModel(Model):
         
         with tf.variable_scope(scope, reuse):
             attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM)
-            outputs, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
-
-            hidden_states_list = attn_cell.get_hidden_states()
-            attn_cell.clear_hidden_states()
-            print "length of hidden states list", len(hidden_states_list)
-            
-            packed_hidden_states = tf.pack(hidden_states_list, axis=2)
-            packed_hidden_states = tf.transpose(packed_hidden_states, perm=[0, 2, 1]) # [batch size x SEQ LENGTH x HIDDEN]
-            print "packed hidden states :", packed_hidden_states
-
-        return (outputs, packed_hidden_states, final_state)
+            o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
+        return (o, final_state)
 
     def add_prediction_op(self): 
         questions = self.add_embedding(self.questions_placeholder)
@@ -81,29 +72,27 @@ class TFModel(Model):
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
         # Passage encoder with attention
-        p_outputs, p_hs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
+        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
         print "passage encoder with attention output shape :", p_outputs
-        h_tilda_and_h = tf.concat(2, [p_outputs, p_hs])
-        print "concatenated h tilda nad h :", h_tilda_and_h
-        
+ 
         # with tf.variable_scope("passage"):
         #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
         #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
 
         # Attention state encoder
         with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(2 * HIDDEN_DIM)
-            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, h_tilda_and_h, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
+            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
-        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])  # HIDDEN
-        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])   # HIDDEN
-        a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])   # 2 * HIDDEN
-        q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 4*HIDDEN_DIM]
+        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
        
         preds = list()
         
         with tf.variable_scope("decoder"):
-            d_cell_dim = 4 * HIDDEN_DIM
+            d_cell_dim = 3 * HIDDEN_DIM
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
             d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM)

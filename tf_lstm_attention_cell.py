@@ -9,23 +9,13 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		self.encoder_hidden_size = encoder_hidden_size
 		super(LSTMAttnCell, self).__init__(num_units)
 
-		self.hidden_states = tf.zeros((tf.shape(self.hs)[0], 1, self.num_units))
-
-	def get_hidden_states(self):
-		return self.hidden_states
-
-	def clear_hidden_states(self):
-		self.hidden_states = tf.zeros((tf.shape(self.hs)[0], 1, self._num_units))
+		
 
 	def __call__(self, inputs, state, scope = None):
 		lstm_out, lstm_state = super(LSTMAttnCell, self).__call__(inputs, state, scope)
 
 		#original_h, original_c = lstm_state
 		original_c, original_h = lstm_state
-
-
-		self.hidden_states = tf.concat(1, [self.hidden_states, tf.reshape(original_h, [-1, 1, self._num_units])])
-		print "length of hidden_states", self.hidden_states
 
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
@@ -51,10 +41,6 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, lstm_out], self._num_units, True, 1.0))
 
-		# print "out dimensions", out
-		# print "original_h dimensions", original_h
-		# h_tilda_and_h = tf.concat(1, [out, original_h])
-		# print "original_htidla and h", h_tilda_and_h
 		
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
