@@ -18,6 +18,7 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
+FILE_TBOARD_LOG = 'L2 model '
 
 class TFModel(Model):
     def add_placeholders(self):
@@ -148,16 +149,16 @@ class TFModel(Model):
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
-        tf.summary.scalar('L2 loss', loss)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
         return loss
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-        tf.summary.scalar("Learning Rate", LEARNING_RATE)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
         grad_norm = tf.global_norm(grads)
-        tf.summary.scalar('Global Gradient Norm', grad_norm)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)
 
