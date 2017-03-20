@@ -58,7 +58,7 @@ class TFModel(Model):
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
         
         with tf.variable_scope(scope, reuse):
-            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM)
             o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
@@ -92,10 +92,10 @@ class TFModel(Model):
         preds = list()
         
         with tf.variable_scope("decoder"):
-            d_cell_dim = 3*HIDDEN_DIM
+            d_cell_dim = 3 * HIDDEN_DIM
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
-            d_cell = LSTMAttnCell(d_cell_dim, p_outputs)
+            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM)
             # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
  
             # Create first-time-step input to LSTM (starter token)
