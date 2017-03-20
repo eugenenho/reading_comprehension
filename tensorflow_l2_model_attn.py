@@ -148,11 +148,12 @@ class TFModel(Model):
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
+        tf.summary.scalar('L2 loss', loss)
         return loss
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-
+        tf.summary.scalar("Learning Rate", LEARNING_RATE)
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
         grad_norm = tf.global_norm(grads)
@@ -174,7 +175,6 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
-            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -241,6 +241,7 @@ if __name__ == "__main__":
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
+            model.train_writer = tf.summary.FileWriter('tsboard/' + '/train', session.graph)
             merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')

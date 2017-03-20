@@ -237,8 +237,11 @@ if __name__ == "__main__":
 
 	print 'Making batch predicting'
 	print len(data_module.get_batch(True))
-	print 'Making batch testing'
+	print 'Making batch Training'
 	print len(data_module.get_batch(False))
+	print 'Get classifier batch'
+	for i in range(74093):
+		print data_module.selected_passage[i]
 
 
 

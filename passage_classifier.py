@@ -25,11 +25,11 @@ class PassClassifier(Model):
         NOTE: You do not have to do anything here.
         """
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
-        self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, MAX_NUM_PASSAGES * PASSAGE_MAX_LENGTH), name="passages")
+        self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, MAX_NUM_PASSAGES, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, ), name="answers")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, dropout=0.5, answers_batch=None):
+    def create_feed_dict(self, questions_batch, passages_batch, dropout=0.5, answers_batch=None):
         """Creates the feed_dict for the model.
         NOTE: You do not have to do anything here.
         """
@@ -68,53 +68,89 @@ class PassClassifier(Model):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
+
         # Passage encoder
-        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
- 
-        # Attention state encoder
-        with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
+        # make list of hidden states for each of the passages in max_num_passages
         q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        p_last = tf.slice(p_outputs, [0, MAX_NUM_PASSAGES * PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        a_last = tf.slice(a_outputs, [0, MAX_NUM_PASSAGES * PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
+        encoded_info = q_last
+        for i in range(MAX_NUM_PASSAGES):
+            curr_passage_embeds = tf.slice(passages, [0, i, 0, 0], [-1, 1, -1, -1])
+            curr_passage_embeds = tf.reshape(curr_passage_embeds, [-1, PASSAGE_MAX_LENGTH, EMBEDDING_DIM])
 
-        input_dim = 3*HIDDEN_DIM            
-        q_p_a_hidden = tf.reshape(q_p_a_hidden, [-1, input_dim])
-        U = tf.get_variable('U', shape=(input_dim, MAX_NUM_PASSAGES), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-        b = tf.get_variable('b', shape=(MAX_NUM_PASSAGES, ), dtype=tf.float32)
+            curr_passage_ids = tf.slice(self.passages_placeholder, [0, i, 0], [-1, 1, -1])
+            curr_passage_ids = tf.reshape(curr_passage_ids, [-1, PASSAGE_MAX_LENGTH])
 
-        return tf.nn.softmax(tf.matmul(q_p_a_hidden, U) + b) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
+            p_outputs, _ = self.encode_w_attn(curr_passage_embeds, self.seq_length(curr_passage_ids), q_outputs, scope = "passage_attn_"+str(i))
+
+            with tf.variable_scope("attention" + str(i)): 
+                a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+                a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(curr_passage_ids))
+
+            p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1]) # [-1, 1, HIDDEN_DIM]
+            a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+            encoded_info = tf.concat(2, [encoded_info, p_last, a_last])
+
+        input_dim = (MAX_NUM_PASSAGES * 2 + 1) * HIDDEN_DIM # 10 a_last's 10 p_lasts and 1 q_last           
+
+        encoded_info = tf.reshape(encoded_info, [-1, input_dim])
+        W = tf.get_variable('W', shape=(input_dim, HIDDEN_DIM), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+        b1 = tf.get_variable('b1', shape=(HIDDEN_DIM, ), dtype=tf.float32)
+
+        h = tf.nn.relu(tf.matmul(encoded_info, W) + b1) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
+
+        U = tf.get_variable('U', shape=(HIDDEN_DIM, MAX_NUM_PASSAGES), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+        b2 = tf.get_variable('b2', shape=(MAX_NUM_PASSAGES, ), dtype=tf.float32)
+
+        res = tf.matmul(h, U) + b2
+        tf.Print(res, [res], message="RES:", summarize=MAX_NUM_PASSAGES)
+
+        return res
 
 
     def add_loss_op(self, preds):        
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-        return tf.reduce_mean(loss_mat)
+        loss = tf.reduce_mean(loss_mat)
+        tf.summary.scalar('Classifier Loss per Batch', loss)
+        return loss
 
     def add_training_op(self, loss):        
-        train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
-        return train_op
+        optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
 
-    def run_epoch(self, sess, data):
+        grad_var_pairs = optimizer.compute_gradients(loss)
+        grads = [g[0] for g in grad_var_pairs]
+        grad_norm = tf.global_norm(grads)
+        tf.summary.scalar('Global Gradient Norm', grad_norm)
+
+        return optimizer.apply_gradients(grad_var_pairs)
+
+    def train_on_batch(self, sess, merged, questions_batch, passages_batch, dropout, answers_batch):
+        """Perform one step of gradient descent on the provided batch of data."""
+        feed = self.create_feed_dict(questions_batch, passages_batch, dropout, answers_batch=answers_batch)
+        #_, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        summary, _, loss = sess.run([merged, self.train_op, self.loss], feed_dict=feed)
+        self.train_writer.add_summary(summary, self.step)
+        self.step += 1
+        return loss
+
+    def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         losses = list()
         i = 0
-        batch = data.get_classifier_batch()
+        batch = data.get_batch()
         while batch is not None:
             q_batch = batch['question']
             p_batch = batch['passage']
-            a_batch = batch['answer']
+            a_batch = batch['selected_passage']
             dropout = batch['dropout']
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, None, dropout, a_batch) #None is for start token
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, dropout, a_batch)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
 
-            batch = data.get_classifier_batch()
+            batch = data.get_batch()
             i += 1
 
         return losses
@@ -126,22 +162,30 @@ class PassClassifier(Model):
         preds = list()
         i = 0
         
-        batch = data.get_classifier_data(predicting=True)
+        batch = data.get_batch(predicting=True)
+        print 'batch', batch
         while batch is not None:
             q_batch = batch['question']
             p_batch = batch['passage']
-            s_t_batch = batch['start_token']
             dropout = batch['dropout']
 
-            prediction = self.predict_on_batch(sess, q_batch, p_batch, s_t_batch, dropout)
+            prediction = self.predict_on_batch(sess, q_batch, p_batch, dropout)
             preds.append(prediction)
 
             prog.update(i + 1, [("Predictions going...", 1)])
 
-            batch = data.get_classifier_data(predicting=True)
+            batch = data.get_batch(predicting=True)
             i += 1
 
         return preds
+
+    def predict_on_batch(self, sess, questions_batch, passages_batch, dropout):
+        feed = self.create_feed_dict(questions_batch, passages_batch, dropout)
+        predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
+        print 'preds', predictions
+        predictions = np.argmax(predictions, axis=1)
+        print 'argmax:', predictions
+        return predictions
 
     def __init__(self, embeddings, predicting=False):
         self.predicting = predicting
@@ -165,9 +209,10 @@ if __name__ == "__main__":
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
+            merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting classifier.....')
-            losses = model.fit(session, saver, data)
+            losses = model.fit(session, saver, merged, data)
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
