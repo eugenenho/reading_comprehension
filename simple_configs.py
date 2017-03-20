@@ -1,7 +1,7 @@
 # DATA PARAMETERS
-TRAIN_BATCH_SIZE = 12
+TRAIN_BATCH_SIZE = 64
 SAVE_PREDICTIONS_FREQUENCY = 10
-NUM_EPOCS = 2
+NUM_EPOCS = 15
 LEARNING_RATE = 0.003
 DROPOUT = 0.8
 SMALL_DATA_SET = True
@@ -15,10 +15,10 @@ MAX_NUM_PASSAGES = 10
 # Embedding params
 VOCAB_SIZE = 20000#228999 #MAX VALUE
 EMBEDDING_DIM = 300
-MAX_DATA_SIZE = 12 #-1 to set no limit on data size
+MAX_DATA_SIZE = -1 #-1 to set no limit on data size
 
 # model params
-HIDDEN_DIM = 100
+HIDDEN_DIM = 300
 
 # directories
 GLOVE_DIR = './download/dwr/'
