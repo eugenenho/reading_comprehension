@@ -115,13 +115,13 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
 
-                if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                # if self.predicting:
+                inp_index = tf.argmax(y_t, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                # else: 
+                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -144,13 +144,13 @@ class TFModel(Model):
         # masked_loss_mat = tf.boolean_mask(loss_mat, masks)
         masked_loss_mat = tf.multiply(loss_mat, masks)
 
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+        print masked_loss_mat
+        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
         masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
 
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
+        print masked_loss_mat
+        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
         loss = tf.reduce_mean(masked_loss_mat)
         tf.summary.scalar('cross_entropy_loss', loss)
@@ -235,18 +235,37 @@ class TFModel(Model):
 
 
     def debug_predictions(self):
-        reshaped_preds = self._temp_test_pred_softmax
+        preds_from_training = self.last_preds
+        preds_from_prediction = self._temp_test_pred_softmax
         
-        sum = 0
-        
-        for i in range(OUTPUT_MAX_LENGTH):
-            one_hot_location = self._temp_test_answer_indices[0][i]
-            log_yhat_value = reshaped_preds[0][i][one_hot_location]
-            print "#", i, " : ", log_yhat_value
-            sum += log_yhat_value
+        sumPred = 0
+        sumTrain = 0
 
-        print "sum : ", sum
+        length = np.sum(np.sign(self._temp_test_answer_indices), axis=1)
+        if len(length) > 1: length = length[0]
+
+        for i in range(OUTPUT_MAX_LENGTH):
+
+
+            one_hot_location = int(self._temp_test_answer_indices[0][i])
+            
+            yhat_value_train = preds_from_training[0][i][one_hot_location]
+            yhat_value = preds_from_prediction[0][i][one_hot_location]
+
+            log_yhat_value_train = -1 * np.log(yhat_value_train, dtype=np.float32)
+            log_yhat_value = -1 * np.log(yhat_value, dtype=np.float32)
+
+            print "#", i, " p y_hat: ", yhat_value, " p log y_hat : ", log_yhat_value, " t y_hat: ", yhat_value_train, " t log y_hat : ", log_yhat_value_train
+            
+            if i < length:
+                sumPred += log_yhat_value
+                sumTrain += log_yhat_value_train
+
+        print "sumPred : ", sumPred
+        print "sumTrain : ", sumTrain
         print "pred argmax ", self._temp_test_pred_argmax
+        print "train argmax ", np.argmax(preds_from_training, axis = 2)
+
         print "answer indices ", self._temp_test_answer_indices
 
 
@@ -283,6 +302,7 @@ if __name__ == "__main__":
             preds = model.predict(session, saver, data)
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
+            print 'Predictions:', preds
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
     model.debug_predictions();
