@@ -49,7 +49,6 @@ class TFModel(Model):
         return embeddings
 
     def seq_length(self, sequence):
-        # used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))
         used = tf.sign(sequence)
         length = tf.reduce_sum(used, reduction_indices=1)
         length = tf.cast(length, tf.int32)
@@ -154,7 +153,6 @@ class TFModel(Model):
         masked_preds = tf.boolean_mask(preds, full_masks)
         masked_y = tf.boolean_mask(y, full_masks)
 
-        # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
         tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)

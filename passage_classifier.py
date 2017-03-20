@@ -127,7 +127,6 @@ class PassClassifier(Model):
     def train_on_batch(self, sess, merged, questions_batch, passages_batch, dropout, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
         feed = self.create_feed_dict(questions_batch, passages_batch, dropout, answers_batch=answers_batch)
-        #_, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         summary, _, loss = sess.run([merged, self.train_op, self.loss], feed_dict=feed)
         self.train_writer.add_summary(summary, self.step)
         self.step += 1
@@ -206,8 +205,6 @@ if __name__ == "__main__":
         saver = tf.train.Saver()
         model.log.write('\ninitialzed classifier variables')
         config = tf.ConfigProto()
-        # config.gpu_options.allow_growth=True
-        # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
             merged = tf.summary.merge_all()
             session.run(init)

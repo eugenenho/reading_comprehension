@@ -74,11 +74,6 @@ class TFModel(Model):
         # Passage encoder
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
  
-
-        # with tf.variable_scope("passage"):
-        #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
-
         # Attention state encoder
         with tf.variable_scope("attention"): 
             a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
