@@ -8,3 +8,12 @@ res = np.dot(mask, loss_mat)
 print res
 print masked
 print res == masked
+
+pred = np.zeros((1, 20000)) + (1.0/20000)
+y = np.zeros((1, 20000))
+y[0] = 1
+
+diff = y - pred
+sq = diff ** 2
+l2 = sq / 2
+print np.sum(l2)
