@@ -41,5 +41,10 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, lstm_out], self._num_units, True, 1.0))
 
+		print "out dimensions", out
+		print "original_h dimensions", original_h
+		h_tilda_and_h = tf.concat(1, [out, original_h])
+		print "original_htidla and h", h_tilda_and_h
+		
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
-		return (out, output_tuple)
+		return (h_tilda_and_h, output_tuple)
