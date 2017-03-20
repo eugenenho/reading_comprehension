@@ -148,6 +148,7 @@ class TFModel(Model):
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
+        tf.summary.scalar('L2 loss', loss)
         return loss
 
     def add_training_op(self, loss):        
@@ -174,7 +175,6 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
-            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
