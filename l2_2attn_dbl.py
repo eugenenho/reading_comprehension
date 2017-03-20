@@ -18,6 +18,7 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
+FILE_TBOARD_LOG = 'L2 2attn dbl '
 
 class TFModel(Model):
     def add_placeholders(self):
@@ -73,11 +74,6 @@ class TFModel(Model):
         # Passage encoder
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
  
-
-        # with tf.variable_scope("passage"):
-        #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
-
         # Attention state encoder
         with tf.variable_scope("attention"): 
             a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
@@ -95,35 +91,45 @@ class TFModel(Model):
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
             d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM)
-            # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
+            d_cell_second = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Create first-time-step input to LSTM (starter token)
-            #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
 
-            # make initial state for LSTM cell
+            # make initial state for first-layer LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
-            h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
+            
+            h_t1 = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
+            h_t2 = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
             # U and b for manipulating the output from LSTM to logit (LSTM output -> logit)
             U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
             b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
             
             for time_step in range(OUTPUT_MAX_LENGTH):
-                o_t, h_t = d_cell(inp, h_t)
+                
+                # first layer
+                o_t1, h_t1 = d_cell(inp, h_t1)
 
-                o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
+                # second layer
+                o_t2, h_t2 = d_cell_second(o_t1, h_t2)
+
+                # dropout layer
+                o_drop_t = tf.nn.dropout(o_t2, self.dropout_placeholder)
+
+                # logit / softmax manipulation
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
-                # if self.predicting:
-                inp_index = tf.argmax(y_t, 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                # else: 
-                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                
+                if self.predicting:
+                    inp_index = tf.argmax(y_t, 1)
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                else: 
+                     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -151,15 +157,16 @@ class TFModel(Model):
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
         return loss
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-
+        tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
         grad_norm = tf.global_norm(grads)
-        tf.summary.scalar('Global Gradient Norm', grad_norm)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)
 
@@ -177,7 +184,6 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
-            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -241,8 +247,7 @@ if __name__ == "__main__":
         saver = tf.train.Saver()
         model.log.write('\ninitialzed variables')
         config = tf.ConfigProto()
-        # config.gpu_options.allow_growth=True
-        # config.gpu_options.per_process_gpu_memory_fraction = 0.6
+
         with tf.Session(config=config) as session:
             merged = tf.summary.merge_all()
             session.run(init)

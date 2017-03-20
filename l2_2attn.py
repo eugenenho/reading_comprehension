@@ -18,6 +18,7 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
+FILE_TBOARD_LOG = 'L2 model '
 
 class TFModel(Model):
     def add_placeholders(self):
@@ -95,8 +96,6 @@ class TFModel(Model):
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
             d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM)
-            d_cell_second = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
-
             # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Create first-time-step input to LSTM (starter token)
@@ -104,39 +103,28 @@ class TFModel(Model):
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
 
-            # make initial state for first-layer LSTM cell
+            # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
-            
-            h_t1 = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
-            h_t2 = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
+            h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
             # U and b for manipulating the output from LSTM to logit (LSTM output -> logit)
             U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
             b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
             
             for time_step in range(OUTPUT_MAX_LENGTH):
-                
-                # first layer
-                o_t1, h_t1 = d_cell(inp, h_t1)
+                o_t, h_t = d_cell(inp, h_t)
 
-                # second layer
-                o_t2, h_t2 = d_cell_second(o_t1, h_t2)
-
-                # dropout layer
-                o_drop_t = tf.nn.dropout(o_t2, self.dropout_placeholder)
-
-                # logit / softmax manipulation
+                o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
-                
-                if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                # if self.predicting:
+                inp_index = tf.argmax(y_t, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                # else: 
+                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -164,15 +152,17 @@ class TFModel(Model):
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
         return loss
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
 
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
         grad_norm = tf.global_norm(grads)
-        tf.summary.scalar('Global Gradient Norm', grad_norm)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)
 

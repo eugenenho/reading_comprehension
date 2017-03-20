@@ -6,7 +6,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 
-import tensorflow_l2_model_attn
+import l2_attn
 
 from simple_configs import TEXT_DATA_DIR, VOCAB_SIZE
 
