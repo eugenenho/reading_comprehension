@@ -136,14 +136,14 @@ class TFModel(Model):
         mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
         mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
         base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
-        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.float32)
+        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.bool)
 
         y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
         preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
 
         # or bool mask
-        masked_preds = tf.multiply(preds, full_masks)
-        masked_y = tf.multiply(y, full_masks)
+        masked_preds = tf.boolean_mask(preds, full_masks)
+        masked_y = tf.boolean_mask(y, full_masks)
 
         # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
