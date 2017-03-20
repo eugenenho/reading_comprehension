@@ -20,20 +20,6 @@ SOS_ID = 3
 UNK_ID = 4
 
 class TFModel(Model):
-
-    def variable_summaries(var):
-        """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-        
-        with tf.name_scope('summaries'):
-            mean = tf.reduce_mean(var)
-            tf.summary.scalar('mean', mean)
-            with tf.name_scope('stddev'):
-                stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-                tf.summary.scalar('stddev', stddev)
-                tf.summary.scalar('max', tf.reduce_max(var))
-                tf.summary.scalar('min', tf.reduce_min(var))
-                tf.summary.histogram('histogram', var)
-
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
@@ -124,20 +110,17 @@ class TFModel(Model):
             
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
-                # U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                # b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
-                tf.summary.scalar('dropout_keep_probability', self.dropout_placeholder)
+
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
-
-                if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                # if self.predicting:
+                inp_index = tf.argmax(y_t, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                # else: 
+                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -147,33 +130,24 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
-
-        # print masks
-        # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
+        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
         
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+        ans_lengths = self.seq_length(self.answers_placeholder)
+        mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
+        mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
+        base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
+        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.bool)
 
-        # print loss_mat
-        # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
-        
-        # masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-        masked_loss_mat = tf.multiply(loss_mat, masks)
+        y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
+        preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
 
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+        # or bool mask
+        masked_preds = tf.boolean_mask(preds, full_masks)
+        masked_y = tf.boolean_mask(y, full_masks)
 
-        masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
-
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
-
-        loss = tf.reduce_mean(masked_loss_mat)
-        tf.summary.scalar('cross_entropy_loss', loss)
-
-        # print loss
-        # loss = tf.Print(loss, [loss], message="loss:")
-
+        # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
+        loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
+        loss = tf.reduce_mean(loss_mat)
         return loss
 
     def add_training_op(self, loss):        
@@ -194,7 +168,6 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
-            tf.summary.scalar(loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -260,25 +233,20 @@ if __name__ == "__main__":
         config = tf.ConfigProto()
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
-
         with tf.Session(config=config) as session:
-            train_writer = tf.summary.FileWriter('tsboard/' + '/train', session.graph)
-            test_writer = tf.summary.FileWriter('tsboard/' + '/test')
-            merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
+            print 'logging preds, just in case:', preds
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
-    train_writer.close()
-    test_writer.close()
-    model.log.close()
 
+    model.log.close()
 
 
 

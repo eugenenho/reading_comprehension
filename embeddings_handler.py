@@ -53,9 +53,10 @@ class EmbeddingHolder(object):
 		return self.embedding_matrix.astype(np.float32)
 		
 
-
-
-
+if __name__ == "__main__":
+	embeddings = EmbeddingHolder().get_embeddings_mat()
+	print 'Lets check out data set'
+	
 
 
 
