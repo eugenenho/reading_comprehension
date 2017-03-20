@@ -41,7 +41,7 @@ class Model(object):
         """Perform one step of gradient descent on the provided batch of data."""
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch=answers_batch)
         #_, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-        summary, _, loss = sess.run([merged, self.train_op, self.loss], feed_dict=feed)
+        summary, _, loss, self.last_preds = sess.run([merged, self.train_op, self.loss, self.pred], feed_dict=feed)
         self.train_writer.add_summary(summary, self.step)
         self.step += 1
         return loss

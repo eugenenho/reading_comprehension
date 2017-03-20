@@ -12,6 +12,12 @@ UNK_ID = 2
 STR_ID = 3
 SOS_ID = 4
 
+PAD_ID = 0
+END_ID = 1
+UNK_ID = 2
+STR_ID = 3
+SOS_ID = 4
+
 class TFDataHolder:
 
 	# pass in data_set ('train', 'val', 'dev')
@@ -53,7 +59,10 @@ class TFDataHolder:
 
 			Q_data[i] = np.array(question[:QUESTION_MAX_LENGTH])
 		Q_data = np.where(Q_data < MAX_NB_WORDS, Q_data, UNK_ID)
+<<<<<<< HEAD
+=======
 
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 		np.save("./data/marco/" + self.data_set + ".data.q_data", Q_data)
 
 		self.log.write('\nbuilt q data')
@@ -73,9 +82,13 @@ class TFDataHolder:
 					passage.extend([PAD_ID] * (PASSAGE_MAX_LENGTH - len(passage)) )
 
 				P_data[i] = np.array(passage[:PASSAGE_MAX_LENGTH])
+<<<<<<< HEAD
+		P_data = np.where(P_data < MAX_NB_WORDS, P_data, UNK_ID)
+=======
 
 		P_data = np.where(P_data < MAX_NB_WORDS, P_data, UNK_ID)
   
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 		np.save("./data/marco/" + self.data_set + ".data.p_data", P_data)
 
 		self.log.write('\nbuilt p data')
@@ -96,6 +109,10 @@ class TFDataHolder:
       
 		A_data = np.where(A_data < MAX_NB_WORDS, A_data, UNK_ID)
 
+<<<<<<< HEAD
+		A_data = np.where(A_data < MAX_NB_WORDS, A_data, UNK_ID)
+=======
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 		np.save("./data/marco/" + self.data_set + ".data.a_data", A_data)
 
 		self.log.write('\nbuilt y data')

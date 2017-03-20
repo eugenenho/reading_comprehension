@@ -147,7 +147,11 @@ def create_vocabulary(vocabulary_path, data_paths, tokenizer=None):
 
         vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
         print("Vocabulary size: %d" % len(vocab_list))
+<<<<<<< HEAD
+        print(vocab_list)
+=======
         # print(vocab_list)
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 
         with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
             for w in vocab_list:
@@ -219,7 +223,11 @@ if __name__ == '__main__':
     # ======== Trim Distributed Word Representation =======
     # If you use other word representations, you should change the code below
 
+<<<<<<< HEAD
+    process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
+=======
     # process_glove(args, rev_vocab, args.source_dir + "/glove.trimmed.{}".format(args.glove_dim))
+>>>>>>> 6e08c851360684a3b9830fc46bac6e27f65b3f85
 
     # ======== Creating Dataset =========
     # We created our data files seperately
