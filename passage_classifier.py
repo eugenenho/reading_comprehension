@@ -104,13 +104,15 @@ class PassClassifier(Model):
 
         res = tf.matmul(h, U) + b2
         tf.Print(res, [res], message="RES:", summarize=MAX_NUM_PASSAGES)
-        print 'res', res
+
         return res
 
 
     def add_loss_op(self, preds):        
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-        return tf.reduce_mean(loss_mat)
+        loss = tf.reduce_mean(loss_mat)
+        tf.summary.scalar('Classifier Loss per Batch', loss)
+        return loss
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
@@ -144,7 +146,6 @@ class PassClassifier(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, dropout, a_batch)
-            tf.summary.scalar('Classifier Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
