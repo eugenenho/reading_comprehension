@@ -68,48 +68,58 @@ class SquadCheck(Model):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
-
         # Passage encoder
+        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
+ 
+        # Attention state encoder
+        with tf.variable_scope("attention"): 
+            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
-        # make list of hidden states for each of the passages in max_num_passages
         q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        encoded_info = q_last
-        for i in range(MAX_NUM_PASSAGES):
-            curr_passage_embeds = tf.slice(passages, [0, i, 0, 0], [-1, 1, -1, -1])
-            curr_passage_embeds = tf.reshape(curr_passage_embeds, [-1, PASSAGE_MAX_LENGTH, EMBEDDING_DIM])
-
-            curr_passage_ids = tf.slice(self.passages_placeholder, [0, i, 0], [-1, 1, -1])
-            curr_passage_ids = tf.reshape(curr_passage_ids, [-1, PASSAGE_MAX_LENGTH])
-
-            p_outputs, _ = self.encode_w_attn(curr_passage_embeds, self.seq_length(curr_passage_ids), q_outputs, scope = "passage_attn_"+str(i))
-
-            with tf.variable_scope("attention" + str(i)): 
-                a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-                a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(curr_passage_ids))
-
-            p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1]) # [-1, 1, HIDDEN_DIM]
-            a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-            encoded_info = tf.concat(2, [encoded_info, p_last, a_last])
-
-        input_dim = (MAX_NUM_PASSAGES * 2 + 1) * HIDDEN_DIM # 10 a_last's 10 p_lasts and 1 q_last           
-
+        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        encoded_info = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
+       
+        preds = list()
+        input_dim = 3*HIDDEN_DIM
         encoded_info = tf.reshape(encoded_info, [-1, input_dim])
-        W = tf.get_variable('W', shape=(input_dim, HIDDEN_DIM), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-        b1 = tf.get_variable('b1', shape=(HIDDEN_DIM, ), dtype=tf.float32)
 
-        h = tf.nn.relu(tf.matmul(encoded_info, W) + b1) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
+        # start token
+        with tf.variable_scope("start_token"):
+	        W = tf.get_variable('W', shape=(input_dim, input_dim), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+	        b1 = tf.get_variable('b1', shape=(input_dim, ), dtype=tf.float32)
 
-        U = tf.get_variable('U', shape=(HIDDEN_DIM, MAX_NUM_PASSAGES), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-        b2 = tf.get_variable('b2', shape=(MAX_NUM_PASSAGES, ), dtype=tf.float32)
+	        h = tf.nn.relu(tf.matmul(encoded_info, W) + b1) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
 
-        res = tf.matmul(h, U) + b2
-        tf.Print(res, [res], message="RES:", summarize=MAX_NUM_PASSAGES)
-        print 'res', res
-        return res
+	        U = tf.get_variable('U', shape=(input_dim, PASSAGE_MAX_LENGTH), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+	        b2 = tf.get_variable('b2', shape=(PASSAGE_MAX_LENGTH, ), dtype=tf.float32)
+
+	        start_token_logit = tf.matmul(h, U) + b2
+
+	    # end token
+        with tf.variable_scope("end_token"):
+	        W = tf.get_variable('W', shape=(input_dim, input_dim), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+	        b1 = tf.get_variable('b1', shape=(input_dim, ), dtype=tf.float32)
+
+	        h = tf.nn.relu(tf.matmul(encoded_info, W) + b1) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
+
+	        U = tf.get_variable('U', shape=(input_dim, PASSAGE_MAX_LENGTH), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+	        b2 = tf.get_variable('b2', shape=(PASSAGE_MAX_LENGTH, ), dtype=tf.float32)
+
+	        end_token_logit = tf.matmul(h, U) + b2
+
+        return (start_token_logit, end_token_logit)
 
 
-    def add_loss_op(self, preds):        
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+    def add_loss_op(self, preds):
+    	start_token_logit = preds[0]
+    	end_token_logit = preds[1]
+
+        start_loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(start_token_logit, self.start_answers_placeholder)
+        end_loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(end_token_logit, self.end_answers_placeholder)
+
+        loss_mat = start_loss_mat + end_loss_mat
         return tf.reduce_mean(loss_mat)
 
     def add_training_op(self, loss):        
