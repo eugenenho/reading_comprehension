@@ -131,28 +131,30 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
-
+        masks_bool = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
+	masks_float = tf.cast(masks_bool, tf.float32)
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
         
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
-        # print loss_mat
+        print loss_mat
         # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
         
-        # masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-        masked_loss_mat = tf.multiply(loss_mat, masks)
+        masked_loss_mat = tf.boolean_mask(loss_mat, masks_bool)
+#       masked_loss_mat = tf.multiply(loss_mat, masks_float)
 
-        # print masked_loss_mat
+        print masked_loss_mat
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
-        masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
+#        masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
 
         # print masked_loss_mat
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
         loss = tf.reduce_mean(masked_loss_mat)
+	#loss_sum = tf.reduce_sum(loss_mat, axis = 1)
+	#loss = tf.reduce_mean(loss_sum)	
 
         # print loss
         # loss = tf.Print(loss, [loss], message="loss:")
@@ -231,6 +233,8 @@ if __name__ == "__main__":
     print 'Starting, and now printing to log.txt'
     data = DataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
+
+
     with tf.Graph().as_default():
         start = time.time()
         model = TFModel(embeddings)
@@ -255,8 +259,6 @@ if __name__ == "__main__":
 
 
     model.log.close()
-
-
 
 
 
