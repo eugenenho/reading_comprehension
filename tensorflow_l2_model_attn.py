@@ -208,8 +208,7 @@ class TFModel(Model):
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
-        softmax_pred = tf.nn.softmax(self.pred, dim=2)
-        predictions = sess.run(softmax_pred, feed_dict=feed)
+        predictions = sess.run(self.pred, feed_dict=feed)
         print 'Preds:', predictions[0][0]
         predictions = np.argmax(predictions, axis=2)
         print 'chosen word:', predictions[0]
