@@ -25,6 +25,18 @@ class Model(object):
     def run_epoch(self, sess, data):
         raise NotImplementedError("Each Model must re-implement this method.")
 
+    def variable_summaries(var):       
+        """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""        
+        with tf.name_scope('summaries'):        
+            mean = tf.reduce_mean(var)      
+            tf.summary.scalar('mean', mean)     
+            with tf.name_scope('stddev'):       
+                stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))     
+                tf.summary.scalar('stddev', stddev)     
+                tf.summary.scalar('max', tf.reduce_max(var))        
+                tf.summary.scalar('min', tf.reduce_min(var))        
+                tf.summary.histogram('histogram', var)
+
     def train_on_batch(self, sess, merged, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         """Perform one step of gradient descent on the provided batch of data."""
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch=answers_batch)

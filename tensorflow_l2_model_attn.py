@@ -151,10 +151,16 @@ class TFModel(Model):
         return loss
 
     def add_training_op(self, loss):        
-        train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
-        return train_op
+        optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
 
-    def run_epoch(self, sess, data):
+        grad_var_pairs = optimizer.compute_gradients(loss)
+        grads = [g[0] for g in grad_var_pairs]
+        grad_norm = tf.global_norm(grads)
+        tf.summary.scalar('Global Gradient Norm', grad_norm)
+
+        return optimizer.apply_gradients(grad_var_pairs)
+
+    def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         losses = list()
@@ -167,7 +173,8 @@ class TFModel(Model):
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -209,9 +216,7 @@ class TFModel(Model):
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
         predictions = sess.run(self.pred, feed_dict=feed)
-        print 'Preds:', predictions[0][0]
         predictions = np.argmax(predictions, axis=2)
-        print 'chosen word:', predictions[0]
         return predictions
 
     def __init__(self, embeddings, predicting=False):
@@ -236,19 +241,20 @@ if __name__ == "__main__":
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
+            merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
-            losses = model.fit(session, saver, data)
+            losses = model.fit(session, saver, merged, data)
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
-            print 'logging preds, just in case:', preds
             index_word = get_predictions.get_index_word_dict()
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
-
-    model.log.close()
+        model.train_writer.close()      
+        model.test_writer.close()
+        model.log.close()
 
 
 
