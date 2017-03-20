@@ -20,7 +20,7 @@ SOS_ID = 3
 UNK_ID = 4
 
 class TFModel(Model):
-
+    
     def variable_summaries(var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
         
@@ -199,7 +199,7 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
-            tf.summary.scalar('loss on batch', loss)
+            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
