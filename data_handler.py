@@ -166,7 +166,7 @@ class DataHolder:
 		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
 		
-		self.start_iter += batch_size
+		self.start_iter = end
 
 		if SMALL_DATA_SET:
 			return {
