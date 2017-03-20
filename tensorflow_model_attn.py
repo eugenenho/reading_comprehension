@@ -133,6 +133,9 @@ class TFModel(Model):
     def add_loss_op(self, preds):
         masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
 
+        self._temp_test_answer_indices = self.answers_placeholder
+        self._temp_test_answer_one_hot = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
+
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
         
@@ -227,8 +230,21 @@ class TFModel(Model):
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
+        self._temp_test_pred_softmax = predictions
         predictions = np.argmax(predictions, axis=2)
+        self._temp_test_pred_argmax = predictions
         return predictions
+
+
+    def debug_predictions(self):
+        reshaped_preds = np.reshape(self._temp_test_pred_softmax, (OUTPUT_MAX_LENGTH, VOCAB_SIZE))
+        answer_one_hot = np.reshape(self._temp_test_answer_one_hot, (OUTPUT_MAX_LENGTH, VOCAB_SIZE))
+        
+        print "np.sum(reshaped_preds * answer_one_hot) ", np.sum(reshaped_preds * answer_one_hot)
+        print "pred argmax ", self._temp_test_pred_argmax
+        print "answer indices ", self._temp_test_answer_indices
+
+
 
     def __init__(self, embeddings, predicting=False):
         self.predicting = predicting
@@ -264,6 +280,7 @@ if __name__ == "__main__":
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
+    model.debug_predictions();
     model.train_writer.close()
     model.test_writer.close()
     model.log.close()
