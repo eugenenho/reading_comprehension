@@ -133,9 +133,6 @@ class TFModel(Model):
     def add_loss_op(self, preds):
         masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
 
-        self._temp_test_answer_indices = self.answers_placeholder
-        self._temp_test_answer_one_hot = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
-
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
         
@@ -186,6 +183,7 @@ class TFModel(Model):
             a_batch = batch['answer']
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
+            self._temp_test_answer_indices = a_batch
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
             tf.summary.scalar('Loss per Batch', loss)
@@ -237,10 +235,17 @@ class TFModel(Model):
 
 
     def debug_predictions(self):
-        reshaped_preds = np.reshape(self._temp_test_pred_softmax, (OUTPUT_MAX_LENGTH, VOCAB_SIZE))
-        answer_one_hot = np.reshape(self._temp_test_answer_one_hot, (OUTPUT_MAX_LENGTH, VOCAB_SIZE))
+        reshaped_preds = self._temp_test_pred_softmax
         
-        print "np.sum(reshaped_preds * answer_one_hot) ", np.sum(reshaped_preds * answer_one_hot)
+        sum = 0
+        
+        for i in range(OUTPUT_MAX_LENGTH):
+            one_hot_location = self._temp_test_answer_indices[0][i]
+            log_yhat_value = reshaped_preds[0][i][one_hot_location]
+            print "#", i, " : ", log_yhat_value
+            sum += log_yhat_value
+
+        print "sum : ", sum
         print "pred argmax ", self._temp_test_pred_argmax
         print "answer indices ", self._temp_test_answer_indices
 
