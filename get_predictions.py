@@ -8,9 +8,15 @@ from embeddings_handler import EmbeddingHolder
 
 import tensorflow_l2_model_attn
 
-from simple_configs import TEXT_DATA_DIR
+from simple_configs import TEXT_DATA_DIR, VOCAB_SIZE
 
 DATA_SET = 'train'
+
+PAD_ID = 0
+STR_ID = 1
+END_ID = 2
+SOS_ID = 3
+UNK_ID = 4
 
 # ~~~ DOESN'T WORK ~~~
 MODEL_PATH = './data/Models/1direction_attn_lstm_with_embeddings_passed_in/model.weights'
@@ -45,8 +51,10 @@ def get_index_word_dict():
 	index_word = dict()
 	f = open(TEXT_DATA_DIR)
 	for i, line in enumerate(f):
-		word = line.lower().strip()
+		if i > VOCAB_SIZE: break
+		word = line.strip()
 		index_word[i] = word
+	f.close()
 	return index_word
 
 def sub_in_word(preds, index_word):
@@ -57,7 +65,7 @@ def sub_in_word(preds, index_word):
 			ans = list()
 			for i in row:
 				ans.append(index_word[i])
-				if i == 1: break #break on end tag
+				if i == END_ID: break #break on end tag
 			ans = ' '.join(ans)
 			word_preds.append(ans)
 
