@@ -153,7 +153,7 @@ class TFModel(Model):
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-
+        tf.summary.scalar("Learning Rate", LEARNING_RATE)
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
         grad_norm = tf.global_norm(grads)
@@ -241,6 +241,7 @@ if __name__ == "__main__":
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
+            model.train_writer = tf.summary.FileWriter('tsboard/' + '/train', session.graph)
             merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
