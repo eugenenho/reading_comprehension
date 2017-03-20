@@ -74,11 +74,6 @@ class TFModel(Model):
         # Passage encoder
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
  
-
-        # with tf.variable_scope("passage"):
-        #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
-
         # Attention state encoder
         with tf.variable_scope("attention"): 
             a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
@@ -96,10 +91,8 @@ class TFModel(Model):
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
             d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM)
-            # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Create first-time-step input to LSTM (starter token)
-            #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
 
@@ -149,7 +142,6 @@ class TFModel(Model):
         masked_preds = tf.boolean_mask(preds, full_masks)
         masked_y = tf.boolean_mask(y, full_masks)
 
-        # loss_mat = tf.nn.softmax_cross_entropy_with_logits(masked_preds, masked_y)
         loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
         loss = tf.reduce_mean(loss_mat)
         tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
@@ -244,8 +236,6 @@ if __name__ == "__main__":
         saver = tf.train.Saver()
         model.log.write('\ninitialzed variables')
         config = tf.ConfigProto()
-        # config.gpu_options.allow_growth=True
-        # config.gpu_options.per_process_gpu_memory_fraction = 0.6
         with tf.Session(config=config) as session:
             merged = tf.summary.merge_all()
             session.run(init)
