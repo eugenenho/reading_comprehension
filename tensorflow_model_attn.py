@@ -195,6 +195,7 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            tf.summary.scalar(loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -251,11 +252,7 @@ if __name__ == "__main__":
         start = time.time()
         model = TFModel(embeddings)
         model.log.write("\nBuild graph took " + str(time.time() - start) + " seconds")
-        # tensorboard code
-        merged = tf.summary.merge_all()
 
-        # tf.global_variables_initializer().run()
-        # end of tensorboard code
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
         model.log.write('\ninitialzed variables')
@@ -266,6 +263,7 @@ if __name__ == "__main__":
         with tf.Session(config=config) as session:
             train_writer = tf.summary.FileWriter('tsboard/' + '/train', session.graph)
             test_writer = tf.summary.FileWriter('tsboard/' + '/test')
+            merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, data)
