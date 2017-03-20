@@ -20,6 +20,20 @@ SOS_ID = 3
 UNK_ID = 4
 
 class TFModel(Model):
+    
+    def variable_summaries(var):
+        """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+        
+        with tf.name_scope('summaries'):
+            mean = tf.reduce_mean(var)
+            tf.summary.scalar('mean', mean)
+            with tf.name_scope('stddev'):
+                stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+                tf.summary.scalar('stddev', stddev)
+                tf.summary.scalar('max', tf.reduce_max(var))
+                tf.summary.scalar('min', tf.reduce_min(var))
+                tf.summary.histogram('histogram', var)
+
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
@@ -153,6 +167,7 @@ class TFModel(Model):
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
         loss = tf.reduce_mean(masked_loss_mat)
+        tf.summary.scalar('cross_entropy_loss', loss)
 
         # print loss
         # loss = tf.Print(loss, [loss], message="loss:")
@@ -160,10 +175,17 @@ class TFModel(Model):
         return loss
 
     def add_training_op(self, loss):        
-        train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
-        return train_op
+        # train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
+        optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
 
-    def run_epoch(self, sess, data):
+        grad_var_pairs = optimizer.compute_gradients(loss)
+        grads = [g[0] for g in grad_var_pairs]
+        grad_norm = tf.global_norm(grads)
+        tf.summary.scalar('Global Gradient Norm', grad_norm)
+
+        return optimizer.apply_gradients(grad_var_pairs)
+
+    def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         losses = list()
@@ -176,7 +198,8 @@ class TFModel(Model):
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
@@ -242,10 +265,12 @@ if __name__ == "__main__":
         config = tf.ConfigProto()
         # config.gpu_options.allow_growth=True
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
+
         with tf.Session(config=config) as session:
+            merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
-            losses = model.fit(session, saver, data)
+            losses = model.fit(session, saver, merged, data)
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
@@ -253,7 +278,8 @@ if __name__ == "__main__":
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
-
+    model.train_writer.close()
+    model.test_writer.close()
     model.log.close()
 
 

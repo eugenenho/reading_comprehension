@@ -46,7 +46,6 @@ class DataHolder:
 
 		self.start_iter = 0
 
-
 	# This constructs the data from the pickled objects
 	def build_q_data(self):
 		questions_list = cPickle.load(open("./data/marco/" + self.data_set + ".ids.question.pkl","rb"))
@@ -225,6 +224,7 @@ class DataHolder:
 
 	def reset_iter(self):
 		self.start_iter = 0
+
 
 if __name__ == "__main__":
 	data_module = DataHolder('train')
