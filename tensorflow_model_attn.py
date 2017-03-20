@@ -124,9 +124,7 @@ class TFModel(Model):
             
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
-                # U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-                # b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
-                tf.summary.scalar('dropout_keep_probability', self.dropout_placeholder)
+
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
@@ -177,10 +175,17 @@ class TFModel(Model):
         return loss
 
     def add_training_op(self, loss):        
-        train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
-        return train_op
+        # train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
+        optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
 
-    def run_epoch(self, sess, data):
+        grad_var_pairs = optimizer.compute_gradients(loss)
+        grads = [g[0] for g in grad_var_pairs]
+        grad_norm = tf.global_norm(grads)
+        tf.summary.scalar('Global Gradient Norm', grad_norm)
+
+        return optimizer.apply_gradients(grad_var_pairs)
+
+    def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
         losses = list()
@@ -193,7 +198,7 @@ class TFModel(Model):
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
 
-            loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
             tf.summary.scalar('loss on batch', loss)
             losses.append(loss)
 
@@ -262,12 +267,10 @@ if __name__ == "__main__":
         # config.gpu_options.per_process_gpu_memory_fraction = 0.6
 
         with tf.Session(config=config) as session:
-            train_writer = tf.summary.FileWriter('tsboard/' + '/train', session.graph)
-            test_writer = tf.summary.FileWriter('tsboard/' + '/test')
             merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
-            losses = model.fit(session, saver, data)
+            losses = model.fit(session, saver, merged, data)
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
@@ -275,8 +278,8 @@ if __name__ == "__main__":
             preds = get_predictions.sub_in_word(preds, index_word)
             get_predictions.build_json_file(preds, './data/train_preds.json')
 
-    train_writer.close()
-    test_writer.close()
+    model.train_writer.close()
+    model.test_writer.close()
     model.log.close()
 
 
