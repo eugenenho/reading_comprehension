@@ -194,7 +194,7 @@ class TFModel(Model):
             dropout = batch['dropout']
 
             loss = self.train_on_batch(sess, q_batch, p_batch, s_t_batch, dropout, a_batch)
-            tf.summary.scalar(loss)
+            tf.summary.scalar('loss on batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
