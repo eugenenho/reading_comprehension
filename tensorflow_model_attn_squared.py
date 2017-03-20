@@ -71,7 +71,7 @@ class TFModel(Model):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
-        # Passage encoder
+        # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
  
 
@@ -93,10 +93,12 @@ class TFModel(Model):
         
         with tf.variable_scope("decoder"):
             d_cell_dim = 3*HIDDEN_DIM
-            d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
+            
+            # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
+            d_cell = LSTMAttnCell(d_cell_dim, p_outputs)
+            # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
  
             # Create first-time-step input to LSTM (starter token)
-            #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
             # make initial state for LSTM cell
@@ -115,13 +117,13 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 y_t = tf.nn.softmax(y_t)
 
-                # if self.predicting:
-                inp_index = tf.argmax(y_t, 1)
-                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                # else: 
-                #     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                #     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                #     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                if self.predicting:
+                    inp_index = tf.argmax(y_t, 1)
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                else: 
+                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
