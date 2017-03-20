@@ -25,7 +25,7 @@ class Model(object):
     def run_epoch(self, sess, data):
         raise NotImplementedError("Each Model must re-implement this method.")
 
-     def variable_summaries(var):       
+    def variable_summaries(var):       
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""        
         with tf.name_scope('summaries'):        
             mean = tf.reduce_mean(var)      

@@ -244,7 +244,7 @@ if __name__ == "__main__":
             merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
-            losses = model.fit(session, saver, data)
+            losses = model.fit(session, saver, merged, data)
 
             model.log.write("starting predictions now.....")
             preds = model.predict(session, saver, data)
