@@ -62,6 +62,7 @@ class TFModel(Model):
         return (o, final_state)
 
     def add_prediction_op(self): 
+        
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
@@ -87,9 +88,9 @@ class TFModel(Model):
         p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
         a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
         q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
-       
+          
         preds = list()
-        
+
         with tf.variable_scope("decoder"):
             d_cell_dim = 3*HIDDEN_DIM
             d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
@@ -100,7 +101,7 @@ class TFModel(Model):
 
 
             # make initial state for LSTM cell
-            h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
+            h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) * 0 # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
