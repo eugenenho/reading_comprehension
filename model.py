@@ -55,8 +55,7 @@ class Model(object):
     def predict_now(self, session, identifier):
         preds = self.predict(session, self.val_data)
         output_file_name = './data/' + identifier + '_val_preds.json'
-        self.predition_hanlder.write_preds(preds, output_file_name)
-
+        self.prediction_hanlder.write_preds(preds, output_file_name)
         try:
             metrics = ms_marco_eval.main('./data/val_ground_truth.json', output_file_name)
             self.log.write('\nMETRICS:\n')
@@ -84,7 +83,7 @@ class Model(object):
         self.train_op = self.add_training_op(self.loss)
 
         self.val_data = DataHolder('val')#['train', 'val']
-        self.predition_hanlder = PredictionHandler()
+        self.prediction_hanlder = PredictionHandler()
 
         self.train_writer = tf.summary.FileWriter('tsboard/' + '/train')
         self.test_writer = tf.summary.FileWriter('tsboard/' + '/test')
