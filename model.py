@@ -5,6 +5,8 @@ from simple_configs import SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE
 from data_handler import DataHolder
 from prediction_handler import PredictionHandler
 
+from simple_configs import VOCAB_SIZE, NUM_POPULAR_WORDS
+
 import sys
 sys.path.insert(0, './ms_marco_eval')
 import ms_marco_eval
@@ -51,6 +53,23 @@ class Model(object):
         self.train_writer.add_summary(summary, self.step)
         self.step += 1
         return loss
+
+    # masks to limit number of words decoder needs to choose from at any given time
+    def get_vocab_masks(self):
+        popular_words = tf.constant([1 for _ in range(NUM_POPULAR_WORDS)] + [0 for _ in range(VOCAB_SIZE - NUM_POPULAR_WORDS)], dtype=tf.float32)
+        mask = tf.zeros((tf.shape(self.questions_placeholder)[0], VOCAB_SIZE)) + popular_words
+
+        q_one_hot = tf.one_hot(self.questions_placeholder, VOCAB_SIZE)
+        questions_mask = tf.reduce_sum(q_one_hot, axis = 1)
+        mask += questions_mask
+
+        p_one_hot = tf.one_hot(self.passages_placeholder, VOCAB_SIZE)
+        passages_mask = tf.reduce_sum(p_one_hot, axis = 1)
+        mask += passages_mask
+
+        return tf.sign(mask)
+
+
 
     def predict_now(self, session, identifier):
         preds = self.predict(session, self.val_data)
