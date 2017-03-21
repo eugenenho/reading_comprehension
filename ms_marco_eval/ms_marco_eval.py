@@ -67,13 +67,10 @@ def load_file(p_path_to_data):
         dictionary mapping from query_id (int) to answers (list of strings).
     no_answer_query_ids (set): set of query ids of no-answer queries.
     """
-    print('loading file...', p_path_to_data)
     all_answers = []
     query_ids = []
     no_answer_query_ids = set()
-    print('about to open it')
     with open(p_path_to_data, 'r') as data_file:
-        print('opened it')
         for line in data_file:
             try:
                 json_object = json.loads(line)
@@ -98,7 +95,6 @@ def load_file(p_path_to_data):
 
             all_answers.extend(answers)
             query_ids.extend([query_id]*len(answers))
-    print('normalized it')
     all_normalized_answers = normalize_batch(all_answers)
 
     query_id_to_answers_map = {}
@@ -107,7 +103,6 @@ def load_file(p_path_to_data):
         if query_id not in query_id_to_answers_map:
             query_id_to_answers_map[query_id] = []
         query_id_to_answers_map[query_id].append(normalized_answer)
-    print('mapped it and now done')
     return query_id_to_answers_map, no_answer_query_ids
 
 def compute_metrics_from_files(p_path_to_reference_file,
