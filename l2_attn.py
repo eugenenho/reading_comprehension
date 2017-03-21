@@ -183,7 +183,7 @@ class TFModel(Model):
             i += 1
         return losses
 
-    def predict(self, sess, saver, data):
+    def predict(self, sess, data):
         self.predicting = True
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -242,12 +242,6 @@ if __name__ == "__main__":
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
-
-            model.log.write("starting predictions now.....")
-            preds = model.predict(session, saver, data)
-            index_word = get_predictions.get_index_word_dict()
-            preds = get_predictions.sub_in_word(preds, index_word)
-            get_predictions.build_json_file(preds, './data/train_preds.json')
 
         model.train_writer.close()      
         model.test_writer.close()

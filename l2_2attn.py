@@ -9,7 +9,6 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
-import get_predictions
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
 
@@ -178,14 +177,12 @@ class TFModel(Model):
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_selected_passage_batch()
-            if i % 1200 == 0 and i > 0:
-                self.log.write('\nNow saving file...')
-                saver.save(sess, SAVE_MODEL_DIR)
-                self.log.write('\nSaved...')
+
             i += 1
+
         return losses
 
-    def predict(self, sess, saver, data):
+    def predict(self, sess, data):
         self.predicting = True
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -227,6 +224,7 @@ if __name__ == "__main__":
     print 'Starting, and now printing to log.txt'
     data = DataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
+
     with tf.Graph().as_default():
         start = time.time()
         model = TFModel(embeddings)
@@ -241,12 +239,6 @@ if __name__ == "__main__":
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
-
-            model.log.write("starting predictions now.....")
-            preds = model.predict(session, saver, data)
-            index_word = get_predictions.get_index_word_dict()
-            preds = get_predictions.sub_in_word(preds, index_word)
-            get_predictions.build_json_file(preds, './data/train_preds.json')
 
         model.train_writer.close()      
         model.test_writer.close()

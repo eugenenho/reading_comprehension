@@ -5,6 +5,7 @@ DROPOUT = 0.8
 SMALL_DATA_SET = False
 MAX_DATA_SIZE = 5 #-1 to set no limit on data size
 TRAIN_BATCH_SIZE = 64
+MAX_GRAD_NORM = 75
 
 # Text params
 QUESTION_MAX_LENGTH = 50

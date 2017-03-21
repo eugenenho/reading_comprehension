@@ -11,7 +11,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 import get_predictions
 
-from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM
 
 PAD_ID = 0
 STR_ID = 1
@@ -161,9 +161,14 @@ class TFModel(Model):
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
         tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
+
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
-        grad_norm = tf.global_norm(grads)
+
+        clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
+        grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
+        
+        grad_norm = tf.global_norm(clipped_grads)
         tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)
@@ -194,7 +199,7 @@ class TFModel(Model):
             i += 1
         return losses
 
-    def predict(self, sess, saver, data):
+    def predict(self, sess, data):
         self.predicting = True
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -251,12 +256,6 @@ if __name__ == "__main__":
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
-
-            model.log.write("starting predictions now.....")
-            preds = model.predict(session, saver, data)
-            index_word = get_predictions.get_index_word_dict()
-            preds = get_predictions.sub_in_word(preds, index_word)
-            get_predictions.build_json_file(preds, './data/train_preds.json')
 
         model.train_writer.close()      
         model.test_writer.close()
