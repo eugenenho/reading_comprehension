@@ -19,6 +19,9 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
+FILE_TBOARD_LOG = 'CE model - relu'
+
+
 class TFModel(Model):
 
     def add_placeholders(self):
@@ -58,7 +61,7 @@ class TFModel(Model):
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
         
         with tf.variable_scope(scope, reuse):
-            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=tf.nn.relu)
             o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
@@ -68,7 +71,7 @@ class TFModel(Model):
 
         # Question encoder
         with tf.variable_scope("question"): 
-            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
         # Passage encoder with attention
@@ -81,7 +84,7 @@ class TFModel(Model):
 
         # Attention state encoder
         with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
         q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
@@ -95,7 +98,7 @@ class TFModel(Model):
             d_cell_dim = 3 * HIDDEN_DIM
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
-            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM)
+            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM, activation=tf.nn.relu)
             # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
  
             # Create first-time-step input to LSTM (starter token)
@@ -115,6 +118,12 @@ class TFModel(Model):
 
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
+
+                # limit vocab size to words that we have seen in question or passage and popular words
+                mask = self.get_vocab_masks()
+                y_t = tf.multiply(y_t, mask)
+                
+                
                 y_t = tf.nn.softmax(y_t)
 
                 if self.predicting:
@@ -163,15 +172,19 @@ class TFModel(Model):
 
         return loss
 
+
     def add_training_op(self, loss):        
-        # train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
 
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
-        grad_norm = tf.global_norm(grads)
-        tf.summary.scalar('Global Gradient Norm', grad_norm)
+        
+        clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
+        grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
 
+        grad_norm = tf.global_norm(clipped_grads)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)        
         return optimizer.apply_gradients(grad_var_pairs)
 
     def run_epoch(self, sess, merged, data):
