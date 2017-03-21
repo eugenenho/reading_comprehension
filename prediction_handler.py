@@ -81,6 +81,8 @@ class PredictionHandler():
 		self.build_json_file(word_preds, output_file_name)
 
 	def __init__(self, data_set=None, output_file_name = OUTPUT_FILE_NAME):
+		# To build ground truth, uncomment these two lines and run the comamand:
+		#  python prediction_handler.py
 		# self.data_set = data_set
 		# self.data = DataHolder(data_set)
 
