@@ -62,6 +62,7 @@ class Model(object):
             self.log.write('\nMETRICS:\n')
             for metric in sorted(metrics):
                 self.log.write( '%s: %s' % (metric, metrics[metric]) ) 
+                self.log.write('\n')
         except Exception, e:
             print 'Could not do eval Script'
 
