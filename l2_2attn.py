@@ -156,7 +156,7 @@ class TFModel(Model):
         clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
         grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
 
-        grad_norm = tf.global_norm(grads)
+        grad_norm = tf.global_norm(clipped_grads)
         tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)

@@ -11,7 +11,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 from tf_lstm_attention_cell_match import MatchLSTMAttnCell
 
-from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM
 
 PAD_ID = 0
 STR_ID = 1
@@ -107,7 +107,7 @@ class TFModel(Model):
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
             # make initial state for LSTM cell
-            h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
+            h_0 = tf.reshape(q_p_match_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
@@ -168,7 +168,7 @@ class TFModel(Model):
         clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
         grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
 
-        grad_norm = tf.global_norm(grads)
+        grad_norm = tf.global_norm(clipped_grads)
         tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)

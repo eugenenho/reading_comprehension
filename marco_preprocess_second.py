@@ -236,7 +236,7 @@ if __name__ == '__main__':
     data_to_token_ids(train_path + ".question.pkl", q_train_ids_path, vocab_path)
     data_to_token_ids(train_path + ".answer.pkl", a_train_ids_path, vocab_path)
 
-    p_valid_ids_path = valid_path + ".ids.context.pkl"
+    p_valid_ids_path = valid_path + ".ids.passage.pkl"
     q_valid_ids_path = valid_path + ".ids.question.pkl"
     a_valid_ids_path = valid_path + ".ids.answer.pkl"
     data_to_token_ids(valid_path + ".passage.pkl", p_valid_ids_path, vocab_path)
