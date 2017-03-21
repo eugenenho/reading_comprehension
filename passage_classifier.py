@@ -103,7 +103,6 @@ class PassClassifier(Model):
         b2 = tf.get_variable('b2', shape=(MAX_NUM_PASSAGES, ), dtype=tf.float32)
 
         res = tf.matmul(h, U) + b2
-        res = tf.Print(res, [res], message="RES:", summarize=MAX_NUM_PASSAGES)
 
         return res
 
