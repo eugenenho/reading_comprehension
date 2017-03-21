@@ -2,8 +2,9 @@ import os
 import numpy as np
 import cPickle
 import h5py
+from sklearn.preprocessing import OneHotEncoder
 
-from simple_configs import TRAIN_BATCH_SIZE, EMBEDDING_DIM, VOCAB_SIZE, OUTPUT_MAX_LENGTH, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_NUM_PASSAGES, MAX_DATA_SIZE, DROPOUT, SMALL_DATA_SET
+from simple_configs import TRAIN_BATCH_SIZE, EMBEDDING_DIM, VOCAB_SIZE, OUTPUT_MAX_LENGTH, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, MAX_NUM_PASSAGES, MAX_DATA_SIZE, DROPOUT, SMALL_DATA_SET, NUM_POPULAR_WORDS
 
 PAD_ID = 0
 STR_ID = 1
@@ -164,8 +165,8 @@ class DataHolder:
 		start = self.start_iter
 		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
-		
-		self.start_iter = end
+
+		self.start_iter += batch_size
 
 		if SMALL_DATA_SET:
 			return {
@@ -242,9 +243,6 @@ if __name__ == "__main__":
 	print len(data_module.get_batch(True))
 	print 'Making batch Training'
 	print len(data_module.get_batch(False))
-	print 'Get classifier batch'
-	for i in range(74093):
-		print data_module.selected_passage[i]
 
 
 
