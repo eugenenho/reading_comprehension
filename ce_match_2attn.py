@@ -58,7 +58,7 @@ class TFModel(Model):
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
         
         with tf.variable_scope(scope, reuse):
-            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=relu)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=tf.nn.relu)
             o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
@@ -68,12 +68,12 @@ class TFModel(Model):
 
         # Question preprocessing encoder
         with tf.variable_scope("question"): 
-            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=relu)
+            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
         # Passage preprocessing encoder
         with tf.variable_scope("passage"): 
-            p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=relu)
+            p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             p_outputs, _ = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
         # Match LSTM layer
@@ -101,7 +101,7 @@ class TFModel(Model):
             d_cell_dim = 3 * HIDDEN_DIM
             
             # Run decoder with attention between DECODER and MATCH OUTPUTS
-            d_cell = LSTMAttnCell(d_cell_dim, match_outputs, HIDDEN_DIM, activation=relu)
+            d_cell = LSTMAttnCell(d_cell_dim, match_outputs, HIDDEN_DIM, activation=tf.nn.relu)
 
             # Create first-time-step input to LSTM (starter token)
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
