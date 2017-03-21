@@ -154,7 +154,7 @@ class PassClassifier(Model):
 
         return losses
 
-    def predict(self, sess, saver, data):
+    def predict(self, sess, data):
         self.testing = False
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             losses = model.fit(session, saver, merged, data)
 
             model.log.write("starting predictions now.....")
-            preds = model.predict(session, saver, data)
+            preds = model.predict(session, data)
             print preds
 
 
