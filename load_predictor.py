@@ -59,9 +59,11 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 			saver.restore(session, model_path)
 			print 'Restored model. Predicting....'
 			preds = model.predict(session, data)
+			list_preds = list()
 			for batch in preds:
 				for row in batch:
 					list_preds.append(row)
+	        preds = np.asarray(list_preds)
 			y = data.get_full_selected()
 			classifier_eval(preds, y)
 		print 'Done Predicting'
