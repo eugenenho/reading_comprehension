@@ -1,5 +1,6 @@
 import time
 import tensorflow as tf
+import numpy as np
 
 import l2_attn
 import l2_2attn
@@ -63,7 +64,7 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 			for batch in preds:
 				for row in batch:
 					list_preds.append(row)
-	        preds = np.asarray(list_preds)
+			preds = np.asarray(list_preds)
 			y = data.get_full_selected()
 			classifier_eval(preds, y)
 		print 'Done Predicting'
