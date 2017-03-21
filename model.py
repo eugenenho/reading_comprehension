@@ -57,7 +57,7 @@ class Model(object):
         output_file_name = './data/' + identifier + '_val_preds.json'
         self.predition_hanlder.write_preds(preds, output_file_name)
         try:
-            metrics = ms_marco_eval.main('./data/val_ground_truth.json', output_file_name)
+            metrics = ms_marco_eval.main('../data/val_ground_truth.json', '.' + output_file_name)
             self.log.write('\nMETRICS:\n')
             for metric in sorted(metrics):
                 self.log.write( '%s: %s' % (metric, metrics[metric]) ) 
