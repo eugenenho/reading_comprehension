@@ -9,7 +9,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
-import get_predictions
+from passage_classifier_eval import classifier_eval
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_NUM_PASSAGES
 
@@ -131,6 +131,20 @@ class PassClassifier(Model):
         self.train_writer.add_summary(summary, self.step)
         self.step += 1
         return loss
+
+    def predict_now(self, session, identifier):
+        preds = self.predict(session, self.val_data)
+        y = self.val_data.get_full_selected()
+        classifier_eval(preds, y, self.log)
+
+        try:
+            metrics = ms_marco_eval.main('./data/val_ground_truth.json', output_file_name)
+            self.log.write('\nMETRICS:\n')
+            for metric in sorted(metrics):
+                self.log.write( '%s: %s' % (metric, metrics[metric]) ) 
+                self.log.write('\n')
+        except Exception, e:
+            print 'Could not do eval Script'
 
     def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)

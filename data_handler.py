@@ -225,6 +225,9 @@ class DataHolder:
 	def reset_iter(self):
 		self.start_iter = 0
 
+	def get_full_selected(self):
+		return self.selected_passage[:]
+
 
 if __name__ == "__main__":
 	data_module = DataHolder('train')
