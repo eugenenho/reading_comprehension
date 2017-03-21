@@ -103,14 +103,14 @@ class PassClassifier(Model):
         b2 = tf.get_variable('b2', shape=(MAX_NUM_PASSAGES, ), dtype=tf.float32)
 
         res = tf.matmul(h, U) + b2
-        tf.Print(res, [res], message="RES:", summarize=MAX_NUM_PASSAGES)
+        res = tf.Print(res, [res], message="RES:", summarize=MAX_NUM_PASSAGES)
 
         return res
 
 
     def add_loss_op(self, preds):        
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-        loss = tf.reduce_mean(loss_mat)
+        loss_vec = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+        loss = tf.reduce_mean(loss_vec)
         tf.summary.scalar('Classifier Loss per Batch', loss)
         return loss
 

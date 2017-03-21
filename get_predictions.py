@@ -6,7 +6,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 
-import l2_attn
+import l2_2attn_dbl
 
 from simple_configs import TEXT_DATA_DIR, VOCAB_SIZE
 
@@ -19,18 +19,16 @@ SOS_ID = 3
 UNK_ID = 4
 
 # ~~~ DOESN'T WORK ~~~
-MODEL_PATH = './data/Models/1direction_attn_lstm_with_embeddings_passed_in/model.weights'
+MODEL_PATH = './data/model.weights'
 def get_preds(data, embeddings):
-	# saver = tf.train.import_meta_graph('data/Models/model.weights.meta')
 	with tf.Graph().as_default():
 		start = time.time()
-		model = tensorflow_l2_model_attn.TFModel(embeddings, True)
+		model = l2_2attn_dbl.TFModel(embeddings, True)
 		print "\nRebuild graph took " + str(time.time() - start) + " seconds"
-		init = tf.global_variables_initializer()
+		saver = tf.train.Saver()
 		with tf.Session() as session:
-			session.run(init)
-			saver = tf.train.import_meta_graph(MODEL_PATH + ".meta")
 			saver.restore(session, MODEL_PATH)
+			print 'STARTING TO MAKE PREDICTIONS'
 			predictions = model.predict(session, saver, data)
 	print 'predictions', predictions
 	return predictions
@@ -101,6 +99,24 @@ if __name__ == "__main__":
 
 
 
+# def do_shell(args):
+#     # config = Config(args)
+#     helper = ModelHelper.load(args.model_path)
+#     embeddings = load_embeddings(args, helper)
+#     config.embed_size = embeddings.shape[1]
+
+#     with tf.Graph().as_default():
+#         logger.info("Building model...",)
+#         start = time.time()
+#         model = RNNModel(helper, config, embeddings)
+#         logger.info("took %.2f seconds", time.time() - start)
+
+#         init = tf.global_variables_initializer()
+#         saver = tf.train.Saver()
+
+#         with tf.Session() as session:
+#             session.run(init)
+#             saver.restore(session, model.config.model_output)
 
 
 
@@ -108,11 +124,26 @@ if __name__ == "__main__":
 
 
 
+#     def load(cls, path):
+#         # Make sure the directory exists.
+#         assert os.path.exists(path) and os.path.exists(os.path.join(path, "features.pkl"))
+#         # Save the tok2id map.
+#         with open(os.path.join(path, "features.pkl")) as f:
+#             tok2id, max_length = pickle.load(f)
+#         return cls(tok2id, max_length)
 
 
 
+# def load_embeddings(args, helper):
+#     embeddings = np.array(np.random.randn(len(helper.tok2id) + 1, EMBED_SIZE), dtype=np.float32)
+#     embeddings[0] = 0.
+#     for word, vec in load_word_vector_mapping(args.vocab, args.vectors).items():
+#         word = normalize(word)
+#         if word in helper.tok2id:
+#             embeddings[helper.tok2id[word]] = vec
+#     logger.info("Initialized embeddings.")
 
-
+#     return embeddings
 
 
 
