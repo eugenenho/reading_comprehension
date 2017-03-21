@@ -67,7 +67,6 @@ def load_file(p_path_to_data):
         dictionary mapping from query_id (int) to answers (list of strings).
     no_answer_query_ids (set): set of query ids of no-answer queries.
     """
-
     all_answers = []
     query_ids = []
     no_answer_query_ids = set()
@@ -128,6 +127,7 @@ def compute_metrics_from_files(p_path_to_reference_file,
 
     reference_dictionary, reference_no_answer_query_ids = \
         load_file(p_path_to_reference_file)
+
     candidate_dictionary, _ = load_file(p_path_to_candidate_file)
 
     filtered_reference_dictionary = \
@@ -164,13 +164,13 @@ def compute_metrics_from_files(p_path_to_reference_file,
 
     return all_scores
 
-def main():
+def main(ref_file = None, cand_file = None):
     """Command line: /ms_marco_metrics$ PYTHONPATH=./bleu python ms_marco_eval.py <path_to_reference_file> <path_to_candidate_file>"""
 
-    path_to_referene_file = sys.argv[1]
-    path_to_candidate_file = sys.argv[2]
+    path_to_reference_file = ref_file if ref_file is not None else sys.argv[1]
+    path_to_candidate_file = cand_file if cand_file is not None else sys.argv[2]
 
-    metrics = compute_metrics_from_files(path_to_referene_file, \
+    metrics = compute_metrics_from_files(path_to_reference_file, \
                                          path_to_candidate_file, \
                                          MAX_BLEU_ORDER)
 
@@ -178,6 +178,7 @@ def main():
     for metric in sorted(metrics):
         print('%s: %s' % (metric, metrics[metric]))
     print('############################')
+    return metrics
 
 if __name__ == "__main__":
     main()
