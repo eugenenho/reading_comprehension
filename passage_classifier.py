@@ -9,7 +9,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
-import get_predictions
+from passage_classifier_eval import classifier_eval
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_NUM_PASSAGES
 
@@ -132,6 +132,16 @@ class PassClassifier(Model):
         self.step += 1
         return loss
 
+    def predict_now(self, session, identifier):
+        preds = self.predict(session, self.val_data)
+        list_preds = list()
+        for batch in preds:
+            for row in batch:
+                list_preds.append(row)
+        preds = np.asarray(list_preds)
+        y = self.val_data.get_full_selected()
+        classifier_eval(preds, y, self.log)
+
     def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -162,7 +172,6 @@ class PassClassifier(Model):
         i = 0
         
         batch = data.get_batch(predicting=True)
-        print 'batch', batch
         while batch is not None:
             q_batch = batch['question']
             p_batch = batch['passage']
@@ -181,9 +190,7 @@ class PassClassifier(Model):
     def predict_on_batch(self, sess, questions_batch, passages_batch, dropout):
         feed = self.create_feed_dict(questions_batch, passages_batch, dropout)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
-        print 'preds', predictions
         predictions = np.argmax(predictions, axis=1)
-        print 'argmax:', predictions
         return predictions
 
     def __init__(self, embeddings, predicting=False):
@@ -210,11 +217,6 @@ if __name__ == "__main__":
             session.run(init)
             model.log.write('\nran init, fitting classifier.....')
             losses = model.fit(session, saver, merged, data)
-
-            model.log.write("starting predictions now.....")
-            preds = model.predict(session, data)
-            print preds
-
 
     model.log.close()
 
