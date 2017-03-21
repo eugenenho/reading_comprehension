@@ -226,11 +226,11 @@ class DataHolder:
 		self.start_iter = 0
 
 	def get_full_selected(self):
-		return self.selected_passage[:]
+		return self.selected_passage[:self.data_size]
 
 
 if __name__ == "__main__":
-	data_module = DataHolder('train')
+	data_module = DataHolder('val')
 	print 'Lets check out data set'
 	print 'Length of Q_data: ', data_module.q_data.shape
 	print 'Length of P_data ', data_module.p_data.shape

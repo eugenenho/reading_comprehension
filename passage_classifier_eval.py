@@ -4,6 +4,7 @@ from simple_configs import MAX_NUM_PASSAGES
 
 # classifier results
 def classifier_eval(preds, y, log_file = None):
+	print 'lengths:', len(preds), len(y)
 	assert len(preds) == len(y)
 
 	num_correct = np.sum(np.equal(y, preds))

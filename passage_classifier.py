@@ -134,17 +134,13 @@ class PassClassifier(Model):
 
     def predict_now(self, session, identifier):
         preds = self.predict(session, self.val_data)
+        list_preds = list()
+        for batch in preds:
+            for row in batch:
+                list_preds.append(row)
+        preds = np.asarray(list_preds)
         y = self.val_data.get_full_selected()
         classifier_eval(preds, y, self.log)
-
-        try:
-            metrics = ms_marco_eval.main('./data/val_ground_truth.json', output_file_name)
-            self.log.write('\nMETRICS:\n')
-            for metric in sorted(metrics):
-                self.log.write( '%s: %s' % (metric, metrics[metric]) ) 
-                self.log.write('\n')
-        except Exception, e:
-            print 'Could not do eval Script'
 
     def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
@@ -176,7 +172,6 @@ class PassClassifier(Model):
         i = 0
         
         batch = data.get_batch(predicting=True)
-        print 'batch', batch
         while batch is not None:
             q_batch = batch['question']
             p_batch = batch['passage']
@@ -195,9 +190,7 @@ class PassClassifier(Model):
     def predict_on_batch(self, sess, questions_batch, passages_batch, dropout):
         feed = self.create_feed_dict(questions_batch, passages_batch, dropout)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
-        print 'preds', predictions
         predictions = np.argmax(predictions, axis=1)
-        print 'argmax:', predictions
         return predictions
 
     def __init__(self, embeddings, predicting=False):
@@ -224,11 +217,6 @@ if __name__ == "__main__":
             session.run(init)
             model.log.write('\nran init, fitting classifier.....')
             losses = model.fit(session, saver, merged, data)
-
-            model.log.write("starting predictions now.....")
-            preds = model.predict(session, data)
-            print preds
-
 
     model.log.close()
 
