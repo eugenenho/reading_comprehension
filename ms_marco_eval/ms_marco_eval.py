@@ -71,6 +71,7 @@ def load_file(p_path_to_data):
     all_answers = []
     query_ids = []
     no_answer_query_ids = set()
+    print('about to open it')
     with open(p_path_to_data, 'r') as data_file:
         print('opened it')
         for line in data_file:
