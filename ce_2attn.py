@@ -11,7 +11,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 import get_predictions
 
-from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM
 
 PAD_ID = 0
 STR_ID = 1
@@ -123,7 +123,7 @@ class TFModel(Model):
                 mask = self.get_vocab_masks()
                 y_t = tf.multiply(y_t, mask)
                 
-                
+
                 y_t = tf.nn.softmax(y_t)
 
                 if self.predicting:
