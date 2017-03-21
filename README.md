@@ -13,6 +13,7 @@ Go to Recurrentshop and install it separately
 Go to Seq2seq and install it
 pip install h5py (for save model)
 (make sure file structure includes data and download as described in github)
+For marco script: sudo python -m spacy.en.download --force all
 
 # Preprocesing steps:
 Run marco_preprocessing.py first, then marco_preprocessing_second.py

@@ -95,7 +95,6 @@ def load_file(p_path_to_data):
 
             all_answers.extend(answers)
             query_ids.extend([query_id]*len(answers))
-
     all_normalized_answers = normalize_batch(all_answers)
 
     query_id_to_answers_map = {}
@@ -104,7 +103,6 @@ def load_file(p_path_to_data):
         if query_id not in query_id_to_answers_map:
             query_id_to_answers_map[query_id] = []
         query_id_to_answers_map[query_id].append(normalized_answer)
-
     return query_id_to_answers_map, no_answer_query_ids
 
 def compute_metrics_from_files(p_path_to_reference_file,
