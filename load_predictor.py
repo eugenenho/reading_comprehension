@@ -59,7 +59,7 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 			saver.restore(session, model_path)
 			print 'Restored model. Predicting....'
 			preds = model.predict(session, data)
-	        y = self.val_data.get_full_selected()
+	        y = data.get_full_selected()
 	        classifier_eval(preds, y)
     	print 'Done Predicting'
 
