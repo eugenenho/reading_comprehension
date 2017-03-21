@@ -18,7 +18,7 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
-FILE_TBOARD_LOG = 'L2 model '
+FILE_TBOARD_LOG = 'CE model '
 
 class TFModel(Model):
     def add_placeholders(self):
