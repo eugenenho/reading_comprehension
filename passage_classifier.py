@@ -131,6 +131,17 @@ class PassClassifier(Model):
 		self.step += 1
 		return loss
 
+	def fit(self, sess, saver, merged, data):
+		losses = []
+		for epoch in range(NUM_EPOCS):
+			self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
+			loss = self.run_epoch(sess, merged, data)
+			losses.append(loss)
+			acc = self.predict_now(sess, str(epoch))
+			if acc >= self.best_accuracy:
+				saver.save(sess, SAVE_MODEL_DIR)
+		return losses
+
 	def predict_now(self, session, identifier):
 		preds = self.predict(session, self.val_data)
 		list_preds = list()
@@ -139,7 +150,8 @@ class PassClassifier(Model):
 				list_preds.append(row)
 		preds = np.asarray(list_preds)
 		y = self.val_data.get_full_selected()
-		classifier_eval(preds, y, self.log)
+		acc, recall, prec, f1 = classifier_eval(preds, y, self.log)
+		return acc
 
 	def run_epoch(self, sess, merged, data):
 		prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
@@ -196,6 +208,7 @@ class PassClassifier(Model):
 		self.predicting = predicting
 		self.pretrained_embeddings = tf.Variable(embeddings)
 		self.log = open(LOG_FILE_DIR, "a")
+		self.best_accuracy = float('-inf')
 		self.build()
 
 if __name__ == "__main__":

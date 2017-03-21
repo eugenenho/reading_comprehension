@@ -63,6 +63,7 @@ def classifier_eval(preds, y, log_file = None):
 	log_print(log_file, 'F1 Score: ' + str(f1_score))
 	log_print(log_file, 'These are the results')
 
+	return (accuracy, avg_recall, avg_precision, f1_score)
 
 # helper method to either print to STDOUT or a log file
 def log_print(log_file, message):
