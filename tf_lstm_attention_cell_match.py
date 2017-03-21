@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 class MatchLSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
-	def __init__(self, num_units, encoder_output, encoder_hidden_size, scope = None):
+	def __init__(self, num_units, encoder_output, encoder_hidden_size, scope = None, activation=tf.nn.tanh):
 
 		# encoder_output : output tensor from Question preprocessing encoder
 		# num_units : MatchLSTMAttnCell's hidden state size  				[HIDDEN_DIM]
@@ -10,7 +10,7 @@ class MatchLSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 		self.hs = encoder_output # [None x QML x H]
 		self.encoder_hidden_size = encoder_hidden_size
-		super(MatchLSTMAttnCell, self).__init__(num_units)
+		super(MatchLSTMAttnCell, self).__init__(num_units, activation=activation)
 		
 
 	def __call__(self, inputs, state, scope = None):
@@ -61,6 +61,10 @@ class MatchLSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
             	concatenated_input = tf.concat(1, [previous_h, attention_component]) # [None x 2H]
 
 		lstm_out, lstm_tuple = super(MatchLSTMAttnCell, self).__call__(concatenated_input, previous_h, scope)
+		print "concatenated_input : ", concatenated_input
+		print "previous_h : ", previous_h
+		print "lstm_out ", lstm_out
+
 		
 		#output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (lstm_out, lstm_tuple)

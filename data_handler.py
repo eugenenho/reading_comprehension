@@ -164,8 +164,8 @@ class DataHolder:
 		start = self.start_iter
 		end = min(self.data_size, self.start_iter + TRAIN_BATCH_SIZE)
 		batch_size = end - self.start_iter
-		
-		self.start_iter = end
+
+		self.start_iter += batch_size
 
 		if SMALL_DATA_SET:
 			return {
@@ -242,9 +242,6 @@ if __name__ == "__main__":
 	print len(data_module.get_batch(True))
 	print 'Making batch Training'
 	print len(data_module.get_batch(False))
-	print 'Get classifier batch'
-	for i in range(74093):
-		print data_module.selected_passage[i]
 
 
 

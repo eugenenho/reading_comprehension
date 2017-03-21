@@ -120,6 +120,11 @@ class TFModel(Model):
 
                 # logit / softmax manipulation
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
+                
+                # limit vocab size to words that we have seen in question or passage and popular words
+                mask = self.get_vocab_masks()
+                y_t = tf.multiply(y_t, mask)
+                
                 y_t = tf.nn.softmax(y_t)
                 
                 if self.predicting:
@@ -135,6 +140,7 @@ class TFModel(Model):
 
             packed_preds = tf.pack(preds, axis=2)
             preds = tf.transpose(packed_preds, perm=[0, 2, 1])
+
         return preds
 
     def add_loss_op(self, preds):

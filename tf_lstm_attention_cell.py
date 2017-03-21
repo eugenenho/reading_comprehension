@@ -1,13 +1,13 @@
 import tensorflow as tf
 
 class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
-	def __init__(self, num_units, encoder_output, encoder_hidden_size, scope = None):
+	def __init__(self, num_units, encoder_output, encoder_hidden_size, scope = None, activation=tf.nn.tanh):
 		# encoder_output : output tensor from passage encoder
 		# num_units : size for hidden_tilda
 
 		self.hs = encoder_output
 		self.encoder_hidden_size = encoder_hidden_size
-		super(LSTMAttnCell, self).__init__(num_units)
+		super(LSTMAttnCell, self).__init__(num_units, activation=activation)
 
 		
 
