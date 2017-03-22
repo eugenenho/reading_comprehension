@@ -16,10 +16,10 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 #####DEBUGGING:
 		temp1 = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
-		temp1 = temp1 + temp1
 		temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
 		temp2 = temp2 + temp1
-		temp1 = tf.multiply(temp1, temp2)
+		temp5 = tf.multiply(temp1, temp2)
+		temp5 = temp5+ temp1
 		
 
 		with tf.variable_scope(scope or type(self).__name__):
@@ -50,7 +50,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 #####DEBUGGING:
 		
-		out = tf.Print(out, [out], message = "out vector :", summarize = 16 * 5)			
+		#out = tf.Print(out, [out], message = "out vector :", summarize = 16 * 5)			
 					
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
