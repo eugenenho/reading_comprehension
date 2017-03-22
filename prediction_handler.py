@@ -45,8 +45,8 @@ class PredictionHandler():
 			for row in batch:
 				ans = list()
 				for i in row:
-					ans.append(self.index_word[i])
 					if i == END_ID: break #break on end tag
+					ans.append(self.index_word[i])
 				ans = ' '.join(ans)
 				word_preds.append(ans)
 		return word_preds
