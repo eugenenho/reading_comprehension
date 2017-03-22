@@ -129,9 +129,9 @@ class TFModel(Model):
         q_p_a_hidden = tf.concat(2, [q_final_h, p_final_h, a_final_h]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]       
 
 ####### DEBUG PART ####
-        print "\n\n##### debugging sliced q_last "
-        print "sliced q_last shape: ", q_last
-        q_last = tf.Print(q_last, [q_last], message="q_last", summarize = 10)
+        # print "\n\n##### debugging sliced q_last "
+        # print "sliced q_last shape: ", q_last
+        # q_last = tf.Print(q_last, [q_last], message="q_last", summarize = 10)
         q_p_a_hidden = tf.Print(q_p_a_hidden, [q_p_a_hidden], message="q_p_a_hidden", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM * 3)
 #######################
 
