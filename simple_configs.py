@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 # DATA PARAMETERS
 NUM_EPOCS = 1
 LEARNING_RATE = 0.001
@@ -19,7 +21,8 @@ VOCAB_SIZE = 20000#228999 #MAX VALUE
 EMBEDDING_DIM = 300
 
 # model params
-HIDDEN_DIM = 300
+HIDDEN_DIM = 5
+ACTIVATION_FUNC = tf.nn.relu
 
 # directories
 GLOVE_DIR = './download/dwr/'
