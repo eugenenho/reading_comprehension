@@ -96,7 +96,7 @@ class TFModel(Model):
         print "\n\n##### debugging input embeddings "
         q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
         print "\n\n"
-        q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h", summarize = 10)
+        q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
 
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
@@ -121,7 +121,7 @@ class TFModel(Model):
         print "\n\n##### debugging sliced q_last "
         print "sliced q_last shape: ", q_last
         q_last = tf.Print(q_last, [q_last], message="q_last", summarize = 10)
-        q_p_a_hidden = tf.Print(q_p_a_hidden, [q_p_a_hidden], message="q_p_a_hidden", summarize = 30)
+        q_p_a_hidden = tf.Print(q_p_a_hidden, [q_p_a_hidden], message="q_p_a_hidden", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM * 3)
 #######################
 
         preds = list()
