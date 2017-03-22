@@ -43,7 +43,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 					# CONFIRM REAL VALUES / DIMS
 
 				temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
-				temp3 = temp3 + tf.ones([16, 15])
+				temp3 = temp3 + tf.ones([tf.shape(context)[0], 15])
 
 #####DEBUGGING:
 		
