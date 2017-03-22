@@ -89,8 +89,10 @@ class TFModel(Model):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
-        q_final_c, q_final_h = q_final_tuple
-        q_final_h = tf.expand_dims(q_final_h, axis=1)
+# # # # ADD THESE LINES
+            q_final_c, q_final_h = q_final_tuple
+            q_final_h = tf.expand_dims(q_final_h, axis=1)
+# # # # # # # # # # # #            
 
 ####### DEBUG PART ####
         print "shape of q_outputs : ", q_outputs
@@ -101,25 +103,30 @@ class TFModel(Model):
         q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h\n", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
         print "\n\n"
         q_final_c = tf.Print(q_final_c, [q_final_c], message="q_final_c\n", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
+#######################
 
         # Passage encoder with attention
-        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
-        print "passage encoder with attention output shape :", p_outputs
- 
-        # with tf.variable_scope("passage"):
-        #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-        #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
+        p_outputs, p_final_tuple = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
+        
+# # # # ADD THESE LINES
+        p_final_c, p_final_h = p_final_tuple
+        p_final_h = tf.expand_dims(p_final_h, axis=1)
+# # # # # # # # # # # #
 
         # Attention state encoder
         with tf.variable_scope("attention"): 
             a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
-            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
+            a_outputs, a_final_tuple = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
-        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        q_p_a_hidden = tf.concat(2, [q_final_h, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
-       
+# # # # ADD THESE LINES
+        a_final_c, a_final_h = a_final_tuple
+        a_final_h = tf.expand_dims(a_final_h, axis=1)
+
+# # # # # # # # # # # #
+        # q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        # p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        # a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_a_hidden = tf.concat(2, [q_final_h, p_final_h, a_final_h]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]       
 
 ####### DEBUG PART ####
         print "\n\n##### debugging sliced q_last "
