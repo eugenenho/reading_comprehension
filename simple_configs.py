@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 # DATA PARAMETERS
 NUM_EPOCS = 1
 LEARNING_RATE = 0.001
