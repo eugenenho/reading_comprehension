@@ -57,10 +57,10 @@ class TFModel(Model):
         length = tf.cast(length, tf.int32)
 
 ####### DEBUG PART #### THIS PART CHECKS OUT
-        print "##### debugging seq_length -- important for masking: "
-        print "sequence length of ", sequence
-        print "::: dimension is : ", length
-        print "input sequence was :"
+#        print "##### debugging seq_length -- important for masking: "
+#        print "sequence length of ", sequence
+#        print "::: dimension is : ", length
+#        print "input sequence was :"
 
         first_line_sequence = tf.slice(sequence, [0, 0], [1, -1])
         first_line_sequence = tf.Print(first_line_sequence, [first_line_sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
@@ -80,10 +80,10 @@ class TFModel(Model):
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
-####### DEBUG PART ####
-        print "##### debugging input embeddings "
-        print "questions dims : should be [None, ", QUESTION_MAX_LENGTH, ", ", EMBEDDING_DIM, " :", questions
-        print "passages dims : should be [None, ", PASSAGE_MAX_LENGTH, ", ", EMBEDDING_DIM, " :", passages
+####### DEBUG PART #### CHECKS OUT
+#        print "##### debugging input embeddings "
+#        print "questions dims : should be [None, ", QUESTION_MAX_LENGTH, ", ", EMBEDDING_DIM, " :", questions
+#        print "passages dims : should be [None, ", PASSAGE_MAX_LENGTH, ", ", EMBEDDING_DIM, " :", passages
 
         # Question encoder
         with tf.variable_scope("question"): 
@@ -95,6 +95,7 @@ class TFModel(Model):
         print "shape of q_final : ", q_final
         print "\n\n##### debugging input embeddings "
         q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
+        print "\n\n"
         q_final = tf.Print(q_final, [q_final], message="q_final", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
 
         # Passage encoder with attention
@@ -231,11 +232,11 @@ class TFModel(Model):
             self._temp_test_answer_indices = a_batch
 
 
-####### DEBUG PART ####
-            print "p batch"
-            print p_batch
-            print "q batch"
-            print q_batch
+####### DEBUG PART #### THIS PART CHECKS OUT
+#            print "p batch"
+#            print p_batch
+#            print "q batch"
+#            print q_batch
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
             tf.summary.scalar('Loss per Batch', loss)
