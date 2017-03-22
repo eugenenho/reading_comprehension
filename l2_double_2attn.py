@@ -235,7 +235,7 @@ class TFModel(Model):
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
-        predictions = sess.run(self.pred, feed_dict=feed)
+        predictions, loss = sess.run([self.pred, self.loss], feed_dict=feed)
         predictions = np.argmax(predictions, axis=2)
         return predictions
 

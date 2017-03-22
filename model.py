@@ -75,6 +75,7 @@ class Model(object):
         preds = self.predict(session, self.val_data)
         output_file_name = './data/' + identifier + '_val_preds.json'
         self.prediction_hanlder.write_preds(preds, output_file_name)
+        metrics = None
         try:
             metrics = ms_marco_eval.main('./data/val_ground_truth.json', output_file_name)
             self.log.write('\nMETRICS:\n')
@@ -83,6 +84,7 @@ class Model(object):
                 self.log.write('\n')
         except Exception, e:
             print 'Could not do eval Script'
+        return metrics
 
     def fit(self, sess, saver, merged, data):
         losses = []
@@ -90,8 +92,9 @@ class Model(object):
             self.log.write("\nEpoch: " + str(epoch + 1) + " out of " + str(NUM_EPOCS))
             loss = self.run_epoch(sess, merged, data)
             losses.append(loss)
-            saver.save(sess, SAVE_MODEL_DIR)
-            self.predict_now(sess, str(epoch))
+            metrics = self.predict_now(sess, str(epoch))
+            if metrics is None or metrics['rouge_l'] >= self.best_rouge:
+                saver.save(sess, SAVE_MODEL_DIR)
         return losses
 
     def build(self):
@@ -103,6 +106,7 @@ class Model(object):
 
         self.val_data = DataHolder('val')#['train', 'val']
         self.prediction_hanlder = PredictionHandler()
+        self.best_rouge = float('-inf')
 
         self.train_writer = tf.summary.FileWriter('tsboard/' + '/train')
         self.test_writer = tf.summary.FileWriter('tsboard/' + '/test')
