@@ -94,9 +94,11 @@ class TFModel(Model):
         print "shape of q_outputs : ", q_outputs
         print "shape of q_final_h : ", q_final_h
         print "\n\n##### debugging input embeddings "
-        q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
+        q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs\n", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
         print "\n\n"
-        q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
+        q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h\n", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
+        print "\n\n"
+        q_final_c = tf.Print(q_final_c, [q_final_c], message="q_final_c\n", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
 
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
