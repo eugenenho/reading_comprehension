@@ -1,4 +1,5 @@
 import tensorflow as tf
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
 
 class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 	def __init__(self, num_units, encoder_output, encoder_hidden_size, scope = None, activation=tf.nn.tanh):
@@ -13,20 +14,14 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		lstm_out, lstm_tuple = super(LSTMAttnCell, self).__call__(inputs, state, scope)
 
 		original_c, original_h = lstm_tuple
-
-#####DEBUGGING:
-		# temp1 = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
-		# temp1 = temp1 + temp1
-		# temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
-		# temp2 = temp2 + temp2
+		# original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
 		
-
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
 
 				# GRAB h_t out of LSTM cell
 				# h_t : [None x H]		[None x 3H]				
-				h_t = tf.nn.rnn_cell._linear(lstm_out, self.encoder_hidden_size, True, 1.0)
+				h_t = tf.nn.rnn_cell._linear(original_h, self.encoder_hidden_size, True, 1.0)
 				
 				# h_t_expanded : [None x 1 x H]       [None x 1 x 3H]
 				h_t = tf.expand_dims(h_t, axis = 1)
@@ -38,14 +33,9 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				context = tf.reduce_sum(self.hs * scores, reduction_indices = 1) # [None x H]
 
 				with tf.variable_scope("AttnConcat"):
-					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, lstm_out], self._num_units, True, 1.0))
-					# CONFIRM REAL VALUES / DIMS
-
-				# temp3 = tf.Print(context, [context], message = "context vector :", summarize = 16 * 5)					
-				# temp3 = temp3 + temp3
-#####DEBUGGING:
-		
-		# out = tf.Print(out, [out], message = "out vector :", summarize = 16 * 5)			
+					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, original_h], self._num_units, True, 1.0))
+				
+		# out = tf.Print(out, [out], message = "out vector :", summarize = HIDDEN_DIM * 10)			
 					
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
