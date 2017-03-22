@@ -20,7 +20,8 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
 		temp2 = temp2 + temp1
 		temp1 = tf.multiply(temp1, temp2)
-		print "original_h shape: ", temp1
+		print "original_h shape: ", original_h
+		print "lstm_out shape: ", lstm_out
 
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
