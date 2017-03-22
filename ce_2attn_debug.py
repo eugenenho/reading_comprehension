@@ -154,7 +154,7 @@ class TFModel(Model):
 ####### DEBUG PART ####
             print "\n\n##### debugging decoder "
             inp = tf.Print(inp, [inp], message = "starter token input : \n", summarize = EMBEDDING_DIM + 50)
-            H_0 = tf.Print(H_0, [H_0], message = "H_0 : \n", summarize = TRAIN_BATCH_SIZE * 3 * HIDDEN_DIM)
+            h_0 = tf.Print(h_0, [h_0], message = "h_0 : \n", summarize = TRAIN_BATCH_SIZE * 3 * HIDDEN_DIM)
             print "U : ", U
             print "b : ", b
 #######################
