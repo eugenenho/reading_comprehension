@@ -45,8 +45,8 @@ class PredictionHandler():
 			for row in batch:
 				ans = list()
 				for i in row:
-					ans.append(self.index_word[i])
 					if i == END_ID: break #break on end tag
+					ans.append(self.index_word[i])
 				ans = ' '.join(ans)
 				word_preds.append(ans)
 		return word_preds
@@ -80,11 +80,12 @@ class PredictionHandler():
 		word_preds = self.sub_in_words(preds)
 		self.build_json_file(word_preds, output_file_name)
 
-	def __init__(self, data_set=None, output_file_name = OUTPUT_FILE_NAME):
+	def __init__(self, data_set=None, output_file_name = OUTPUT_FILE_NAME, build_ground_truth=False):
 		# To build ground truth, uncomment these two lines and run the comamand:
 		#  python prediction_handler.py
-		# self.data_set = data_set
-		# self.data = DataHolder(data_set)
+		if build_ground_truth:
+			self.data_set = data_set
+			self.data = DataHolder(data_set)
 
 		self.output_file_name = output_file_name
 		self.index_word = self.get_index_word_dict()
@@ -93,9 +94,9 @@ class PredictionHandler():
 
 
 if __name__ == "__main__":
-	predictor = PredictionHandler('train') 
+	predictor = PredictionHandler('train', OUTPUT_FILE_NAME, True) 
 	predictor.get_ground_truth('./data/train_ground_truth.json')
-	predictor = PredictionHandler('val')
+	predictor = PredictionHandler('val', OUTPUT_FILE_NAME, True)
 	predictor.get_ground_truth('./data/val_ground_truth.json')
 	# predictor.get_preds(model = None, session = None, output_file_name = './data/train_preds.json')
 
