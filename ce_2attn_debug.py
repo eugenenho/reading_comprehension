@@ -90,7 +90,11 @@ class TFModel(Model):
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
+####### DEBUG PART ####
+        print "\n\n##### debugging input embeddings "
+        q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs")
         
+
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
         print "passage encoder with attention output shape :", p_outputs

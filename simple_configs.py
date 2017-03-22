@@ -19,7 +19,7 @@ VOCAB_SIZE = 20000#228999 #MAX VALUE
 EMBEDDING_DIM = 300
 
 # model params
-HIDDEN_DIM = 300
+HIDDEN_DIM = 5
 
 # directories
 GLOVE_DIR = './download/dwr/'
