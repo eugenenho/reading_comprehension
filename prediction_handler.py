@@ -51,7 +51,7 @@ class PredictionHandler():
 					# do this so we get no credit for unkown words in the eval script
 					if building_ground_truth and i == UNK_ID:
 						ans.append(GROUND_TRUTH_UNK_WORD)
-
+						continue
 					ans.append(self.index_word[i])
 				ans = ' '.join(ans)
 				word_preds.append(ans)
