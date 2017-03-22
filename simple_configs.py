@@ -20,6 +20,7 @@ EMBEDDING_DIM = 300
 
 # model params
 HIDDEN_DIM = 5
+ACTIVATION_FUNC = 'tf.nn.relu'
 
 # directories
 GLOVE_DIR = './download/dwr/'
