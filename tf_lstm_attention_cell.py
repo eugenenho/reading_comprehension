@@ -19,6 +19,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		temp1 = temp1 + temp1
 		temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
 		temp2 = temp2 + temp1
+		temp1 = tf.multiply(temp1, temp2)
 		
 
 		with tf.variable_scope(scope or type(self).__name__):
@@ -42,7 +43,8 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 					# CONFIRM REAL VALUES / DIMS
 
 				temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
-				temp3 = temp3 + temp3
+				temp3 = temp3 + temp1
+				
 #####DEBUGGING:
 		
 		out = tf.Print(out, [out], message = "out vector :", summarize = 16 * 5)			
