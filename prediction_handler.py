@@ -80,11 +80,12 @@ class PredictionHandler():
 		word_preds = self.sub_in_words(preds)
 		self.build_json_file(word_preds, output_file_name)
 
-	def __init__(self, data_set=None, output_file_name = OUTPUT_FILE_NAME):
+	def __init__(self, data_set=None, output_file_name = OUTPUT_FILE_NAME, build_ground_truth=False):
 		# To build ground truth, uncomment these two lines and run the comamand:
 		#  python prediction_handler.py
-		# self.data_set = data_set
-		# self.data = DataHolder(data_set)
+		if build_ground_truth:
+			self.data_set = data_set
+			self.data = DataHolder(data_set)
 
 		self.output_file_name = output_file_name
 		self.index_word = self.get_index_word_dict()
@@ -93,10 +94,10 @@ class PredictionHandler():
 
 
 if __name__ == "__main__":
-	predictor = PredictionHandler('train') 
+	predictor = PredictionHandler('train', build_ground_truth=True) 
 	predictor.get_ground_truth('./data/train_ground_truth.json')
 	predictor = PredictionHandler('val')
-	predictor.get_ground_truth('./data/val_ground_truth.json')
+	predictor.get_ground_truth('./data/val_ground_truth.json', build_ground_truth=True)
 	# predictor.get_preds(model = None, session = None, output_file_name = './data/train_preds.json')
 
 
