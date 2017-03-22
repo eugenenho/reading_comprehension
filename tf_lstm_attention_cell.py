@@ -15,11 +15,11 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		original_c, original_h = lstm_tuple
 
 #####DEBUGGING:
-		temp1 = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
-		temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
-		temp2 = temp2 + temp1
-		temp5 = tf.multiply(temp1, temp2)
-		temp5 = temp5+ temp1
+		original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
+		# temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
+		# temp2 = temp2 + temp1
+		# temp5 = tf.multiply(temp1, temp2)
+		# temp5 = temp5+ temp1
 		
 
 		with tf.variable_scope(scope or type(self).__name__):
@@ -27,7 +27,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 				# GRAB h_t out of LSTM cell
 				# h_t : [None x H]		[None x 3H]				
-				h_t = tf.nn.rnn_cell._linear(lstm_out, self.encoder_hidden_size, True, 1.0)
+				h_t = tf.nn.rnn_cell._linear(original_h, self.encoder_hidden_size, True, 1.0)
 				
 				# h_t_expanded : [None x 1 x H]       [None x 1 x 3H]
 				h_t = tf.expand_dims(h_t, axis = 1)
@@ -39,14 +39,10 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				context = tf.reduce_sum(self.hs * scores, reduction_indices = 1) # [None x H]
 
 				with tf.variable_scope("AttnConcat"):
-					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, lstm_out], self._num_units, True, 1.0))
-					# CONFIRM REAL VALUES / DIMS
-				print "context shape : ", context
-				print "original_h shape: ", original_h
-				print "lstm_out shape: ", lstm_out
-
-				temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
-				temp4 = tf.concat(1, [temp1, temp3])
+					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, original_h], self._num_units, True, 1.0))
+				
+				# temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
+				# temp4 = tf.concat(1, [temp1, temp3])
 
 #####DEBUGGING:
 		
