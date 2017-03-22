@@ -13,15 +13,8 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		lstm_out, lstm_tuple = super(LSTMAttnCell, self).__call__(inputs, state, scope)
 
 		original_c, original_h = lstm_tuple
-
-#####DEBUGGING:
-		original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
-		# temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
-		# temp2 = temp2 + temp1
-		# temp5 = tf.multiply(temp1, temp2)
-		# temp5 = temp5+ temp1
+		# original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
 		
-
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
 
@@ -41,11 +34,6 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, original_h], self._num_units, True, 1.0))
 				
-				# temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
-				# temp4 = tf.concat(1, [temp1, temp3])
-
-#####DEBUGGING:
-		
 		#out = tf.Print(out, [out], message = "out vector :", summarize = 16 * 5)			
 					
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)

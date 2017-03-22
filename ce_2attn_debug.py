@@ -151,12 +151,12 @@ class TFModel(Model):
             b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
             
 
-####### DEBUG PART ####
-            print "\n\n##### debugging decoder "
-            inp = tf.Print(inp, [inp], message = "starter token input : \n", summarize = EMBEDDING_DIM + 50)
-            h_0 = tf.Print(h_0, [h_0], message = "h_0 : \n", summarize = TRAIN_BATCH_SIZE * 3 * HIDDEN_DIM)
-            print "U : ", U
-            print "b : ", b
+####### DEBUG PART #### THIS PART CHECKS OUT
+#            print "\n\n##### debugging decoder "
+#            inp = tf.Print(inp, [inp], message = "starter token input : \n", summarize = EMBEDDING_DIM + 50)
+#            h_0 = tf.Print(h_0, [h_0], message = "h_0 : \n", summarize = TRAIN_BATCH_SIZE * 3 * HIDDEN_DIM)
+#            print "U : ", U
+#            print "b : ", b
 #######################
 
             for time_step in range(OUTPUT_MAX_LENGTH):
@@ -165,10 +165,16 @@ class TFModel(Model):
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
+                y_t = tf.Print(y_t, [y_t], message="y_t : \n", summarize = 500)
+                
                 # limit vocab size to words that we have seen in question or passage and popular words
                 mask = self.get_vocab_masks()
+
+                mask = tf.Print(mask, [mask], message="mask : \n", summarize = 500)
+                
                 y_t = tf.multiply(y_t, mask)
                 
+                y_t = tf.Print(y_t, [y_t], message="post mask y_t : \n", summarize = 500)
 
                 y_t = tf.nn.softmax(y_t)
 
