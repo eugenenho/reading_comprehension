@@ -90,6 +90,8 @@ class TFModel(Model):
             q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
         q_final_c, q_final_h = q_final_tuple
+        q_final_h = tf.expand_dims(q_final_h, axis=1)
+
 ####### DEBUG PART ####
         print "shape of q_outputs : ", q_outputs
         print "shape of q_final_h : ", q_final_h
@@ -116,7 +118,7 @@ class TFModel(Model):
         q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
         p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
         a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-        q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
+        q_p_a_hidden = tf.concat(2, [q_final_h, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
        
 
 ####### DEBUG PART ####
