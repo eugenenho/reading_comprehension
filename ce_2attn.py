@@ -9,7 +9,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
-import get_predictions
+#import get_predictions
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM
 
@@ -20,7 +20,6 @@ SOS_ID = 3
 UNK_ID = 4
 
 FILE_TBOARD_LOG = 'CE model - relu'
-
 
 class TFModel(Model):
 
@@ -56,6 +55,16 @@ class TFModel(Model):
         used = tf.sign(sequence)
         length = tf.reduce_sum(used, reduction_indices=1)
         length = tf.cast(length, tf.int32)
+
+####### DEBUG PART ####
+        print "##### debugging seq_length -- important for masking: "
+        print "sequence length of ", sequence
+        print "::: dimension is : ", length
+        print "input sequence was :"
+        sequence = tf.Print(sequence, [sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
+        print "actual seq_length output is :"
+        length = tf.Print(length, [length], message="length content", summarize=TRAIN_BATCH_SIZE)
+
         return length
 
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
@@ -69,11 +78,17 @@ class TFModel(Model):
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
+####### DEBUG PART ####
+        print "##### debugging input embeddings "
+        print "questions dims : should be [None, ", QUESTION_MAX_LENGTH, ", ", EMBEDDING_DIM, " :", questions
+        print "passages dims : should be [None, ", PASSAGE_MAX_LENGTH, ", ", EMBEDDING_DIM, " :", passages
+
         # Question encoder
         with tf.variable_scope("question"): 
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
             q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
+        
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
         print "passage encoder with attention output shape :", p_outputs
