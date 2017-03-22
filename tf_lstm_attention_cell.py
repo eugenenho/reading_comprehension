@@ -20,7 +20,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		temp2 = tf.Print(lstm_out, [lstm_out], message = "lstm_out vector :", summarize = 16 * 5)
 		temp2 = temp2 + temp1
 		temp1 = tf.multiply(temp1, temp2)
-		
+		print "original_h shape: ", temp1
 
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
@@ -41,9 +41,10 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, lstm_out], self._num_units, True, 1.0))
 					# CONFIRM REAL VALUES / DIMS
+				print "context shape : ", context
 
 				temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
-				temp3 = temp3 * temp1
+				temp4 = tf.concat(2, [temp1, temp3])
 
 #####DEBUGGING:
 		
