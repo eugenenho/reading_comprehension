@@ -188,6 +188,8 @@ class TFModel(Model):
                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
+                inp = tf.Print(inp, [inp], message="inp : \n", summarize = 500)    
+                
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
 
