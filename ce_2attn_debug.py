@@ -88,12 +88,14 @@ class TFModel(Model):
         # Question encoder
         with tf.variable_scope("question"): 
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
-            q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
+            q_outputs, q_final = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
 ####### DEBUG PART ####
+        print "shape of q_outputs : ", q_outputs
+        print "shape of q_final : ", q_final
         print "\n\n##### debugging input embeddings "
-        q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs")
-        
+        q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
+        q_final = tf.Print(q_final, [q_final], message="q_final", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
 
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
@@ -113,6 +115,12 @@ class TFModel(Model):
         a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
         q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
        
+
+####### DEBUG PART ####
+        print "\n\n##### debugging sliced q_last "
+        print "sliced q_last shape: ", q_last
+        q_last = tf.Print(q_last, [q_last], message="q_last", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
+
         preds = list()
         
         with tf.variable_scope("decoder"):
