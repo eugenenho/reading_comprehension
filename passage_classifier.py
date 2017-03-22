@@ -11,7 +11,7 @@ from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
 from passage_classifier_eval import classifier_eval
 
-from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_NUM_PASSAGES, ACTIVATION_FUNC
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_NUM_PASSAGES, ACTIVATION_FUNC, MAX_GRAD_NORM
 
 PAD_ID = 0
 STR_ID = 1
@@ -55,7 +55,7 @@ class PassClassifier(Model):
 	def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
 		
 		with tf.variable_scope(scope, reuse):
-			attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=ACTIVATION_FUNC)
+			attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM)
 			o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
 		return (o, final_state)
 
@@ -65,11 +65,11 @@ class PassClassifier(Model):
 
 		# Question encoder
 		with tf.variable_scope("question"): 
-			q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
+			q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
 			q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 			q_final_c, q_final_h = q_final_tuple
 			q_final_h = tf.expand_dims(q_final_h, axis=1)
-			q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h:", summarize=50)
+
 		# Passage encoder
 		# make list of hidden states for each of the passages in max_num_passages
 		passage_list = list()
@@ -79,10 +79,6 @@ class PassClassifier(Model):
 			curr_passage_ids = tf.slice(self.passages_placeholder, [0, i, 0], [-1, 1, -1])
 			curr_passage_ids = tf.reshape(curr_passage_ids, [-1, PASSAGE_MAX_LENGTH])
 
-			if tf.reduce_sum(self.seq_length(curr_passage_ids)) == 0:
-				passage_list.append( tf.zeros(tf.shape(curr_passage_ids)[0], PASSAGE_MAX_LENGTH) )
-				continue
-
 			# get data for current passage
 			curr_passage_embeds = tf.slice(passages, [0, i, 0, 0], [-1, 1, -1, -1])
 			curr_passage_embeds = tf.reshape(curr_passage_embeds, [-1, PASSAGE_MAX_LENGTH, EMBEDDING_DIM])
@@ -91,15 +87,13 @@ class PassClassifier(Model):
 			p_outputs, p_final_tuple = self.encode_w_attn(curr_passage_embeds, self.seq_length(curr_passage_ids), q_outputs, scope = "passage_attn_"+str(i))
 			p_final_c, p_final_h = p_final_tuple
 			p_final_h = tf.expand_dims(p_final_h, axis=1)
-			p_final_h = tf.Print(p_final_h, [p_final_h], message="p_final_h:", summarize=50)
 
 			# encode passage again with attention
 			with tf.variable_scope("attention" + str(i)): 
-				a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
+				a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
 				a_outputs, a_final_tuple = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(curr_passage_ids))
 				a_final_c, a_final_h = a_final_tuple
 				a_final_h = tf.expand_dims(a_final_h, axis=1)
-				a_final_h = tf.Print(a_final_h, [a_final_h], message="a_final_h:", summarize=50)
 
 			# "decode" by getting score on the passage
 			encoded_dim = 3 * HIDDEN_DIM # 10 a_final_h's 10 p_final_hs and 1 q_final_h           
@@ -117,7 +111,6 @@ class PassClassifier(Model):
 				passage_list.append(scores)
 
 		scores_mat = tf.reshape(tf.pack(passage_list, axis=1), [-1, MAX_NUM_PASSAGES])
-		scores_mat = tf.Print(scores_mat, [scores_mat], message="\n\nScores value:", summarize=100)
 		return scores_mat
 
 
@@ -129,11 +122,16 @@ class PassClassifier(Model):
 
 	def add_training_op(self, loss):        
 		optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
+		tf.summary.scalar('Classifier LEARNING_RATE', loss)
 
 		grad_var_pairs = optimizer.compute_gradients(loss)
 		grads = [g[0] for g in grad_var_pairs]
-		grad_norm = tf.global_norm(grads)
-		tf.summary.scalar('Global Gradient Norm', grad_norm)
+
+		clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
+		grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
+		
+		grad_norm = tf.global_norm(clipped_grads)
+		tf.summary.scalar('Classifier Global Gradient Norm', grad_norm)
 
 		return optimizer.apply_gradients(grad_var_pairs)
 
