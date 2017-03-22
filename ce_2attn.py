@@ -61,7 +61,9 @@ class TFModel(Model):
         print "sequence length of ", sequence
         print "::: dimension is : ", length
         print "input sequence was :"
-        sequence = tf.Print(sequence, [sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
+        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        first_line_sequence = tf.slice(sequence, [0, 0], [1, -1])
+        first_line_sequence = tf.Print(first_line_sequence, [first_line_sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
         print "actual seq_length output is :"
         length = tf.Print(length, [length], message="length content", summarize=TRAIN_BATCH_SIZE)
 
