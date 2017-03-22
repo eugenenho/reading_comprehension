@@ -78,6 +78,7 @@ class Model(object):
         metrics = None
         try:
             metrics = ms_marco_eval.main('./data/val_ground_truth.json', output_file_name)
+            self.metrics_tracker.append(metrics)
             self.log.write('\nMETRICS:\n')
             for metric in sorted(metrics):
                 self.log.write( '%s: %s' % (metric, metrics[metric]) ) 
@@ -95,6 +96,16 @@ class Model(object):
             metrics = self.predict_now(sess, str(epoch))
             if metrics is None or metrics['rouge_l'] >= self.best_rouge:
                 saver.save(sess, SAVE_MODEL_DIR)
+
+        # save metrics to a file to graph later
+        if len(self.metrics_tracker) > 0:
+            f = open('./data/metrics_tracker.txt', 'a')
+            f.write('\n\n\n')
+            for metric_batch in enumerate(self.metrics_tracker):
+                f.write( json.dumps(metric_batch) )
+                f.write('\n')
+            f.close()
+
         return losses
 
     def build(self):
@@ -107,6 +118,7 @@ class Model(object):
         self.val_data = DataHolder('val')#['train', 'val']
         self.prediction_hanlder = PredictionHandler()
         self.best_rouge = float('-inf')
+        self.metrics_tracker = list()
 
         self.train_writer = tf.summary.FileWriter('tsboard/' + '/train')
         self.test_writer = tf.summary.FileWriter('tsboard/' + '/test')

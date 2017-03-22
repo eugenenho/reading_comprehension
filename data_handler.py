@@ -11,7 +11,7 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
-class DataHolder:
+class DataHolder(object):
 
 	# pass in data_set ('train', 'val', 'dev')
 	def __init__(self, DATA_SET):
