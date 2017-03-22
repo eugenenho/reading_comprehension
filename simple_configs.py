@@ -1,11 +1,11 @@
 import tensorflow as tf
 
 # DATA PARAMETERS
-NUM_EPOCS = 1
+NUM_EPOCS = 5
 LEARNING_RATE = 0.001
-DROPOUT = 0.8
+DROPOUT = 1
 SMALL_DATA_SET = False
-MAX_DATA_SIZE = 5 #-1 to set no limit on data size
+MAX_DATA_SIZE = 12 #-1 to set no limit on data size
 TRAIN_BATCH_SIZE = 128
 MAX_GRAD_NORM = 40
 
@@ -21,7 +21,7 @@ VOCAB_SIZE = 20000#228999 #MAX VALUE
 EMBEDDING_DIM = 300
 
 # model params
-HIDDEN_DIM = 5
+HIDDEN_DIM = 300
 ACTIVATION_FUNC = tf.nn.relu
 
 # directories
