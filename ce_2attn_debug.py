@@ -61,11 +61,10 @@ class TFModel(Model):
 #        print "sequence length of ", sequence
 #        print "::: dimension is : ", length
 #        print "input sequence was :"
-
-        first_line_sequence = tf.slice(sequence, [0, 0], [1, -1])
-        first_line_sequence = tf.Print(first_line_sequence, [first_line_sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
-        print "actual seq_length output is :"
-        length = tf.Print(length, [length], message="length content", summarize=TRAIN_BATCH_SIZE)
+#        first_line_sequence = tf.slice(sequence, [0, 0], [1, -1])
+#        first_line_sequence = tf.Print(first_line_sequence, [first_line_sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
+#        print "actual seq_length output is :"
+#        length = tf.Print(length, [length], message="length content", summarize=TRAIN_BATCH_SIZE)
 
         return length
 
@@ -96,7 +95,7 @@ class TFModel(Model):
         print "\n\n##### debugging input embeddings "
         q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
         print "\n\n"
-        q_final = tf.Print(q_final, [q_final], message="q_final", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
+        q_final = tf.Print(q_final, [q_final], message="q_final", summarize = 10)
 
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
@@ -120,7 +119,9 @@ class TFModel(Model):
 ####### DEBUG PART ####
         print "\n\n##### debugging sliced q_last "
         print "sliced q_last shape: ", q_last
-        q_last = tf.Print(q_last, [q_last], message="q_last", summarize = TRAIN_BATCH_SIZE * HIDDEN_DIM)
+        q_last = tf.Print(q_last, [q_last], message="q_last", summarize = 10)
+        q_p_a_hidden = tf.Print(q_p_a_hidden, [q_p_a_hidden], message="q_p_a_hidden", summarize = 30)
+#######################
 
         preds = list()
         
