@@ -67,8 +67,6 @@ class Model(object):
         passages_mask = tf.reduce_sum(p_one_hot, axis = 1)
         mask += passages_mask
 
-        mask = tf.Print(mask, [mask], message="mask : \n", summarize = 1000)
-
         return tf.sign(mask)
 
 

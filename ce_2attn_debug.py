@@ -165,18 +165,20 @@ class TFModel(Model):
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
-                y_t = tf.Print(y_t, [y_t], message="y_t : \n", summarize = 500)
+                # y_t = tf.Print(y_t, [y_t], message="y_t : \n", summarize = 500)
                 
                 # limit vocab size to words that we have seen in question or passage and popular words
                 mask = self.get_vocab_masks()
 
-                mask = tf.Print(mask, [mask], message="mask : \n", summarize = 500)
+                # mask = tf.Print(mask, [mask], message="mask : \n", summarize = 500)
                 
                 y_t = tf.multiply(y_t, mask)
                 
                 y_t = tf.Print(y_t, [y_t], message="post mask y_t : \n", summarize = 500)
 
                 y_t = tf.nn.softmax(y_t)
+
+                y_t = tf.Print(y_t, [y_t], message="post softmax y_t : \n", summarize = 500)
 
                 if self.predicting:
                     inp_index = tf.argmax(y_t, 1)
