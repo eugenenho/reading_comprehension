@@ -84,7 +84,7 @@ class TFModel(Model):
 
         # Concatenation of all final hidden states
         q_p_a_hidden = tf.concat(2, [q_final_h, p_final_h, a_final_h]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]              
-
+        tf.Print(q_p_a_hidden, [q_p_a_hidden], message="Final Hidden State:", summarize=75)
         preds = list()
         
         with tf.variable_scope("decoder"):
