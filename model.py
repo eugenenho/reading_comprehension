@@ -4,6 +4,7 @@ import numpy as np
 from simple_configs import SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE
 from data_handler import DataHolder
 from prediction_handler import PredictionHandler
+import json
 
 from simple_configs import VOCAB_SIZE, NUM_POPULAR_WORDS
 
