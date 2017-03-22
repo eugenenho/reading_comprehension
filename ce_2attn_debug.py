@@ -9,7 +9,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
-#import get_predictions
+
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
 
@@ -136,10 +136,10 @@ class TFModel(Model):
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
             d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM, activation=ACTIVATION_FUNC)
-            # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
  
             # Create first-time-step input to LSTM (starter token)
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
+
 
             # make initial state for LSTM cell
             h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
@@ -150,6 +150,15 @@ class TFModel(Model):
             U = tf.get_variable('U', shape=(d_cell_dim, VOCAB_SIZE), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
             b = tf.get_variable('b', shape=(VOCAB_SIZE, ), dtype=tf.float32)
             
+
+####### DEBUG PART ####
+            print "\n\n##### debugging decoder "
+            inp = tf.Print(inp, [inp], message = "starter token input : \n", summarize = EMBEDDING_DIM + 50)
+            h_o = tf.Print(h_o, [h_o], message = "h_o : \n", summarize = TRAIN_BATCH_SIZE * 3 * HIDDEN_DIM)
+            print "U : ", U
+            print "b : ", b
+#######################
+
             for time_step in range(OUTPUT_MAX_LENGTH):
                 o_t, h_t = d_cell(inp, h_t)
 
