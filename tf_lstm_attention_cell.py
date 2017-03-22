@@ -44,7 +44,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				print "context shape : ", context
 
 				temp3 = tf.Print(context, [context], message = "\n\ncontext vector :", summarize = 16 * 5)					
-				temp4 = tf.concat(2, [temp1, temp3])
+				temp4 = tf.concat(1, [temp1, temp3])
 
 #####DEBUGGING:
 		
