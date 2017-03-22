@@ -1,11 +1,11 @@
 import tensorflow as tf
 
 # DATA PARAMETERS
-NUM_EPOCS = 10
-LEARNING_RATE = 0.001
+NUM_EPOCS = 5
+LEARNING_RATE = 0.0003
 DROPOUT = 0.8
-SMALL_DATA_SET = False
-MAX_DATA_SIZE = 500 #-1 to set no limit on data size
+SMALL_DATA_SET = True
+MAX_DATA_SIZE = 2000 #-1 to set no limit on data size
 TRAIN_BATCH_SIZE = 50
 MAX_GRAD_NORM = 40
 
