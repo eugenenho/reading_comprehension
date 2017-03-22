@@ -20,6 +20,7 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
+GROUND_TRUTH_UNK_WORD = '____'
 
 DATA_SET = 'train'
 OUTPUT_FILE_NAME = './data/last_run_preds.json'
@@ -39,13 +40,18 @@ class PredictionHandler():
 	# Takes in a LIST of NUMPY MATRIXS [BATCH, OUTPUT_MAX_LEN]
 	# Replaces indexes with words
 	'''RETURNS: [str(answer), ... , str(answer)]'''
-	def sub_in_words(self, preds):
+	def sub_in_words(self, preds, building_ground_truth = False):
 		word_preds = list()
 		for batch in preds:
 			for row in batch:
 				ans = list()
 				for i in row:
 					if i == END_ID: break #break on end tag
+
+					# do this so we get no credit for unkown words in the eval script
+					if building_ground_truth and i == UNK_ID:
+						ans.append(GROUND_TRUTH_UNK_WORD)
+						continue
 					ans.append(self.index_word[i])
 				ans = ' '.join(ans)
 				word_preds.append(ans)
@@ -73,7 +79,7 @@ class PredictionHandler():
 			A_data.append(A_batch)
 			batch = self.data.get_selected_passage_batch()
 
-		word_truths = self.sub_in_words(A_data)
+		word_truths = self.sub_in_words(A_data, True)
 		self.build_json_file(word_truths, output_file_name)
 
 	def write_preds(self, preds, output_file_name = None):
