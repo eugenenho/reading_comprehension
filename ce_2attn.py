@@ -161,7 +161,7 @@ class TFModel(Model):
         # print masked_loss_mat
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
-        loss = tf.reduce_mean(masked_loss_mat)
+        loss = tf.reduce_sum(masked_loss_mat)
         tf.summary.scalar('cross_entropy_loss', loss)
 
         # print loss
@@ -172,7 +172,7 @@ class TFModel(Model):
 
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
+        tf.summary.scalar(FILE_TBOARD_LOG + 'LOSS', loss)
 
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
