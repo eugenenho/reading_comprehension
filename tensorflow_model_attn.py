@@ -9,16 +9,18 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
+import get_predictions
 
-from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
+from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM
+
 PAD_ID = 0
 STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
-FILE_TBOARD_LOG = 'L2 model '
 
 class TFModel(Model):
+
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
         NOTE: You do not have to do anything here.
@@ -56,7 +58,7 @@ class TFModel(Model):
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
         
         with tf.variable_scope(scope, reuse):
-            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=ACTIVATION_FUNC)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states)
             o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
@@ -66,35 +68,35 @@ class TFModel(Model):
 
         # Question encoder
         with tf.variable_scope("question"): 
-            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
-            q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
-            q_final_c, q_final_h = q_final_tuple
-            q_final_h = tf.expand_dims(q_final_h, axis=1)
+            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
-       # Passage encoder with attention
-        p_outputs, p_final_tuple = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
-        p_final_c, p_final_h = p_final_tuple
-        p_final_h = tf.expand_dims(p_final_h, axis=1)
+        # Passage encoder
+        p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
+ 
 
-        # Attention state encoder (Match LSTM layer variant)
+        # with tf.variable_scope("passage"):
+        #     p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+        #     p_outputs, p_state_tuple = tf.nn.dynamic_rnn(p_cell, passages, initial_state=q_state_tuple, dtype=tf.float32, sequence_length=self.seq_length(passages))
+
+        # Attention state encoder
         with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
-            a_outputs, a_final_tuple = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
-            a_final_c, a_final_h = a_final_tuple
-            a_final_h = tf.expand_dims(a_final_h, axis=1)
+            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
-        # Concatenation of all final hidden states
-        q_p_a_hidden = tf.concat(2, [q_final_h, p_final_h, a_final_h]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]              
-        
+        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_a_hidden = tf.concat(2, [q_last, p_last, a_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
+       
         preds = list()
         
         with tf.variable_scope("decoder"):
-            d_cell_dim = 3 * HIDDEN_DIM
-            
-            # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
-            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM, activation=ACTIVATION_FUNC)
-
+            d_cell_dim = 3*HIDDEN_DIM
+            d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
+ 
             # Create first-time-step input to LSTM (starter token)
+            #inp = self.start_token_placeholder # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
             # make initial state for LSTM cell
@@ -111,12 +113,8 @@ class TFModel(Model):
 
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
-                
-                # limit vocab size to words that we have seen in question or passage and popular words
-                mask = self.get_vocab_masks()
-                y_t = tf.multiply(y_t, mask)
-
                 y_t = tf.nn.softmax(y_t)
+
                 # if self.predicting:
                 inp_index = tf.argmax(y_t, 1)
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
@@ -133,38 +131,43 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
+        masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
+
+        # print masks
+        # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
         
-        ans_lengths = self.seq_length(self.answers_placeholder)
-        mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
-        mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
-        base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
-        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.bool)
+        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
-        y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
-        preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
+        # print loss_mat
+        # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
-        # or bool mask
-        masked_preds = tf.boolean_mask(preds, full_masks)
-        masked_y = tf.boolean_mask(y, full_masks)
+        # masked_loss_mat = tf.boolean_mask(loss_mat, masks)
+        masked_loss_mat = tf.multiply(loss_mat, masks)
 
-        loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
-        loss = tf.reduce_mean(loss_mat)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
+        # print masked_loss_mat
+        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+
+        masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
+
+        # print masked_loss_mat
+        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
+
+        loss = tf.reduce_mean(masked_loss_mat)
+        tf.summary.scalar('cross_entropy_loss', loss)
+
+        # print loss
+        # loss = tf.Print(loss, [loss], message="loss:")
+
         return loss
 
     def add_training_op(self, loss):        
+        # train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
 
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
-        
-        clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
-        grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
-
-        grad_norm = tf.global_norm(clipped_grads)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)
+        grad_norm = tf.global_norm(grads)
+        tf.summary.scalar('Global Gradient Norm', grad_norm)
 
         return optimizer.apply_gradients(grad_var_pairs)
 
@@ -180,6 +183,7 @@ class TFModel(Model):
             a_batch = batch['answer']
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
+            self._temp_test_answer_indices = a_batch
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
             tf.summary.scalar('Loss per Batch', loss)
@@ -188,12 +192,14 @@ class TFModel(Model):
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_selected_passage_batch()
-
+            if i % 1200 == 0 and i > 0:
+                self.log.write('\nNow saving file...')
+                saver.save(sess, SAVE_MODEL_DIR)
+                self.log.write('\nSaved...')
             i += 1
-
         return losses
 
-    def predict(self, sess, data):
+    def predict(self, sess, saver, data):
         self.predicting = True
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -221,9 +227,48 @@ class TFModel(Model):
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
-        predictions = sess.run(self.pred, feed_dict=feed)
+        predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
+        self._temp_test_pred_softmax = predictions
         predictions = np.argmax(predictions, axis=2)
+        self._temp_test_pred_argmax = predictions
         return predictions
+
+
+    def debug_predictions(self):
+        preds_from_training = self.last_preds
+        preds_from_prediction = self._temp_test_pred_softmax
+        
+        sumPred = 0
+        sumTrain = 0
+
+        length = np.sum(np.sign(self._temp_test_answer_indices), axis=1)
+        if len(length) > 1: length = length[0]
+
+        for i in range(OUTPUT_MAX_LENGTH):
+
+
+            one_hot_location = int(self._temp_test_answer_indices[0][i])
+            
+            yhat_value_train = preds_from_training[0][i][one_hot_location]
+            yhat_value = preds_from_prediction[0][i][one_hot_location]
+
+            log_yhat_value_train = -1 * np.log(yhat_value_train, dtype=np.float32)
+            log_yhat_value = -1 * np.log(yhat_value, dtype=np.float32)
+
+            print "#", i, " p y_hat: ", yhat_value, " p log y_hat : ", log_yhat_value, " t y_hat: ", yhat_value_train, " t log y_hat : ", log_yhat_value_train
+            
+            if i < length:
+                sumPred += log_yhat_value
+                sumTrain += log_yhat_value_train
+
+        print "sumPred : ", sumPred
+        print "sumTrain : ", sumTrain
+        print "pred argmax ", self._temp_test_pred_argmax
+        print "train argmax ", np.argmax(preds_from_training, axis = 2)
+
+        print "answer indices ", self._temp_test_answer_indices
+
+
 
     def __init__(self, embeddings, predicting=False):
         self.predicting = predicting
@@ -235,7 +280,6 @@ if __name__ == "__main__":
     print 'Starting, and now printing to log.txt'
     data = DataHolder('train')
     embeddings = EmbeddingHolder().get_embeddings_mat()
-
     with tf.Graph().as_default():
         start = time.time()
         model = TFModel(embeddings)
@@ -245,15 +289,27 @@ if __name__ == "__main__":
         saver = tf.train.Saver()
         model.log.write('\ninitialzed variables')
         config = tf.ConfigProto()
+        # config.gpu_options.allow_growth=True
+        # config.gpu_options.per_process_gpu_memory_fraction = 0.6
+
         with tf.Session(config=config) as session:
             merged = tf.summary.merge_all()
             session.run(init)
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
 
-        model.train_writer.close()      
-        model.test_writer.close()
-        model.log.close()
+            model.log.write("starting predictions now.....")
+            preds = model.predict(session, saver, data)
+            index_word = get_predictions.get_index_word_dict()
+            preds = get_predictions.sub_in_word(preds, index_word)
+            print 'Predictions:', preds
+            get_predictions.build_json_file(preds, './data/train_preds.json')
+
+    model.debug_predictions();
+    model.train_writer.close()
+    model.test_writer.close()
+    model.log.close()
+
 
 
 

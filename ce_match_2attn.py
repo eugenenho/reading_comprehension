@@ -9,6 +9,7 @@ from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 from tf_lstm_attention_cell import LSTMAttnCell
+from tf_lstm_attention_cell_match import MatchLSTMAttnCell
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
 PAD_ID = 0
@@ -16,7 +17,7 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
-FILE_TBOARD_LOG = 'L2 model '
+FILE_TBOARD_LOG = 'CE model '
 
 class TFModel(Model):
     def add_placeholders(self):
@@ -56,7 +57,7 @@ class TFModel(Model):
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
         
         with tf.variable_scope(scope, reuse):
-            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=ACTIVATION_FUNC)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=tf.nn.relu)
             o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
@@ -64,41 +65,48 @@ class TFModel(Model):
         questions = self.add_embedding(self.questions_placeholder)
         passages = self.add_embedding(self.passages_placeholder)
 
-        # Question encoder
+        # Question preprocessing encoder
         with tf.variable_scope("question"): 
-            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
-            q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
-            q_final_c, q_final_h = q_final_tuple
-            q_final_h = tf.expand_dims(q_final_h, axis=1)
+            q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
+            q_outputs, _ = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
-       # Passage encoder with attention
-        p_outputs, p_final_tuple = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
-        p_final_c, p_final_h = p_final_tuple
-        p_final_h = tf.expand_dims(p_final_h, axis=1)
+        # Passage preprocessing encoder
+        with tf.variable_scope("passage"): 
+            p_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
+            p_outputs, _ = tf.nn.dynamic_rnn(p_cell, passages, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
 
-        # Attention state encoder (Match LSTM layer variant)
-        with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
-            a_outputs, a_final_tuple = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
-            a_final_c, a_final_h = a_final_tuple
-            a_final_h = tf.expand_dims(a_final_h, axis=1)
+        # Match LSTM layer
+        # Inputs: hidden sates from Passage preprocessing encoder (p_outputs) [None x PASSAGE_MAX_LENGTH x HIDDEN_DIM]    
+        # Encoder_inputs: hidden states from Question preprocessing encoder (q_outputs) [None x QUESTION_MAX_LENGTH x HIDDEN_DIM]
+        # Dimension of Match LSTM attention cell: HIDDEN_DIM
+        # Dimension of  : HIDDEN_DIM
+        # Masking to be done on Match LSTM: same as passage masking (seq_length(self.passages_placeholder))
 
-        # Concatenation of all final hidden states
-        q_p_a_hidden = tf.concat(2, [q_final_h, p_final_h, a_final_h]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]              
-        
+        match_outputs, _ = self.encode_w_attn(p_outputs, self.seq_length(self.passages_placeholder), q_outputs, scope = "match_LSTM_layer")
+ 
+        # # Attention state encoder
+        # with tf.variable_scope("attention"): 
+        #     a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+        #     a_outputs, _ = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
+
+        q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        match_last = tf.slice(match_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
+        q_p_match_hidden = tf.concat(2, [q_last, p_last, match_last]) # SHAPE: [BATCH, 1, 3*HIDDEN_DIM]
+       
         preds = list()
         
         with tf.variable_scope("decoder"):
             d_cell_dim = 3 * HIDDEN_DIM
             
-            # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
-            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM, activation=ACTIVATION_FUNC)
+            # Run decoder with attention between DECODER and MATCH OUTPUTS
+            d_cell = LSTMAttnCell(d_cell_dim, match_outputs, HIDDEN_DIM, activation=tf.nn.relu)
 
             # Create first-time-step input to LSTM (starter token)
             inp = self.add_embedding(self.start_token_placeholder) # STARTER TOKEN, SHAPE: [BATCH, EMBEDDING_DIM]
 
             # make initial state for LSTM cell
-            h_0 = tf.reshape(q_p_a_hidden, [-1, d_cell_dim]) # hidden state from passage and question
+            h_0 = tf.reshape(q_p_match_hidden, [-1, d_cell_dim]) # hidden state from passage and question
             c_0 = tf.reshape(tf.zeros((d_cell_dim)), [-1, d_cell_dim]) # empty memory SHAPE [BATCH, 2*HIDDEN_DIM]
             h_t = tf.nn.rnn_cell.LSTMStateTuple(c_0, h_0)
             
@@ -111,12 +119,8 @@ class TFModel(Model):
 
                 o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
-                
-                # limit vocab size to words that we have seen in question or passage and popular words
-                mask = self.get_vocab_masks()
-                y_t = tf.multiply(y_t, mask)
-
                 y_t = tf.nn.softmax(y_t)
+                
                 # if self.predicting:
                 inp_index = tf.argmax(y_t, 1)
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
@@ -133,24 +137,16 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        y = tf.one_hot(self.answers_placeholder, VOCAB_SIZE)
+
+    
+        masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
+        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
         
-        ans_lengths = self.seq_length(self.answers_placeholder)
-        mask = tf.sequence_mask(ans_lengths, OUTPUT_MAX_LENGTH)
-        mask = tf.reshape(mask, [tf.shape(y)[0], OUTPUT_MAX_LENGTH, 1])
-        base_zeros = tf.zeros(tf.shape(y), dtype=tf.int32) + tf.cast(mask, tf.int32)
-        full_masks = tf.cast(tf.reshape(base_zeros, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH]), tf.bool)
+        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
+        loss = tf.reduce_mean(masked_loss_mat)
 
-        y = tf.reshape(y, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
-        preds = tf.reshape(preds, [-1, VOCAB_SIZE * OUTPUT_MAX_LENGTH])
+        tf.summary.scalar('cross_entropy_loss', loss)
 
-        # or bool mask
-        masked_preds = tf.boolean_mask(preds, full_masks)
-        masked_y = tf.boolean_mask(y, full_masks)
-
-        loss_mat = tf.nn.l2_loss(masked_y - masked_preds)
-        loss = tf.reduce_mean(loss_mat)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
         return loss
 
     def add_training_op(self, loss):        
