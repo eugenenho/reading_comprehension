@@ -72,14 +72,18 @@ class PassClassifier(Model):
 		# Passage encoder
 
 		# make list of hidden states for each of the passages in max_num_passages
+		encoded_dim = 3 * HIDDEN_DIM # 10 a_last's 10 p_lasts and 1 q_last           
 		q_last = tf.slice(q_outputs, [0, QUESTION_MAX_LENGTH - 1, 0], [-1, 1, -1])
-		encoded_info = q_last
+		passage_list = list()
 		for i in range(MAX_NUM_PASSAGES):
-			curr_passage_embeds = tf.slice(passages, [0, i, 0, 0], [-1, 1, -1, -1])
-			curr_passage_embeds = tf.reshape(curr_passage_embeds, [-1, PASSAGE_MAX_LENGTH, EMBEDDING_DIM])
-
+			
+			# get mask for current passage
 			curr_passage_ids = tf.slice(self.passages_placeholder, [0, i, 0], [-1, 1, -1])
 			curr_passage_ids = tf.reshape(curr_passage_ids, [-1, PASSAGE_MAX_LENGTH])
+
+			# get data for current passage
+			curr_passage_embeds = tf.slice(passages, [0, i, 0, 0], [-1, 1, -1, -1])
+			curr_passage_embeds = tf.reshape(curr_passage_embeds, [-1, PASSAGE_MAX_LENGTH, EMBEDDING_DIM])
 
 			p_outputs, _ = self.encode_w_attn(curr_passage_embeds, self.seq_length(curr_passage_ids), q_outputs, scope = "passage_attn_"+str(i))
 
@@ -89,22 +93,21 @@ class PassClassifier(Model):
 
 			p_last = tf.slice(p_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1]) # [-1, 1, HIDDEN_DIM]
 			a_last = tf.slice(a_outputs, [0, PASSAGE_MAX_LENGTH - 1, 0], [-1, 1, -1])
-			encoded_info = tf.concat(2, [encoded_info, p_last, a_last])
 
-		input_dim = (MAX_NUM_PASSAGES * 2 + 1) * HIDDEN_DIM # 10 a_last's 10 p_lasts and 1 q_last           
+			encoded_mat = tf.concat(2, [q_last, p_last, a_last])
+			encoded_mat = tf.reshape(encoded_mat, [-1, encoded_dim])
 
-		encoded_info = tf.reshape(encoded_info, [-1, input_dim])
-		W = tf.get_variable('W', shape=(input_dim, HIDDEN_DIM), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-		b1 = tf.get_variable('b1', shape=(HIDDEN_DIM, ), dtype=tf.float32)
+			with tf.variable_scope("scores" + str(i)):
+				W = tf.get_variable('score_W', shape=(encoded_dim, HIDDEN_DIM), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+				b1 = tf.get_variable('score_b1', shape=(HIDDEN_DIM, ), dtype=tf.float32)
+				U = tf.get_variable('score_U', shape=(HIDDEN_DIM, 1), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
 
-		h = tf.nn.relu(tf.matmul(encoded_info, W) + b1) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
+				h = tf.nn.relu(tf.matmul(encoded_mat, W) + b1) # SHAPE: [BATCH, MAX_NUM_PASSAGE]
+				scores = tf.matmul(h, U)
+				passage_list.append(scores)
 
-		U = tf.get_variable('U', shape=(HIDDEN_DIM, MAX_NUM_PASSAGES), initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
-		b2 = tf.get_variable('b2', shape=(MAX_NUM_PASSAGES, ), dtype=tf.float32)
-
-		res = tf.matmul(h, U) + b2
-
-		return res
+		scores_mat = tf.reshape(tf.pack(passage_list, axis=1), [-1, MAX_NUM_PASSAGES])
+		return scores_mat
 
 
 	def add_loss_op(self, preds):        
