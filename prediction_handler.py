@@ -94,10 +94,10 @@ class PredictionHandler():
 
 
 if __name__ == "__main__":
-	predictor = PredictionHandler('train', build_ground_truth=True) 
+	predictor = PredictionHandler('train', OUTPUT_FILE_NAME, True) 
 	predictor.get_ground_truth('./data/train_ground_truth.json')
-	predictor = PredictionHandler('val')
-	predictor.get_ground_truth('./data/val_ground_truth.json', build_ground_truth=True)
+	predictor = PredictionHandler('val', OUTPUT_FILE_NAME, True)
+	predictor.get_ground_truth('./data/val_ground_truth.json')
 	# predictor.get_preds(model = None, session = None, output_file_name = './data/train_preds.json')
 
 
