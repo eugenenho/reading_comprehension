@@ -64,7 +64,7 @@ class TFModel(Model):
 #        first_line_sequence = tf.slice(sequence, [0, 0], [1, -1])
 #        first_line_sequence = tf.Print(first_line_sequence, [first_line_sequence], message="sequence content", summarize=PASSAGE_MAX_LENGTH)
 #        print "actual seq_length output is :"
-#        length = tf.Print(length, [length], message="length content", summarize=TRAIN_BATCH_SIZE)
+        length = tf.Print(length, [length], message="length content", summarize=TRAIN_BATCH_SIZE)
 
         return length
 
@@ -87,15 +87,16 @@ class TFModel(Model):
         # Question encoder
         with tf.variable_scope("question"): 
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=tf.nn.relu)
-            q_outputs, q_final = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
+            q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
 
+        q_final_c, q_final_h = q_final_tuple
 ####### DEBUG PART ####
         print "shape of q_outputs : ", q_outputs
-        print "shape of q_final : ", q_final
+        print "shape of q_final_h : ", q_final_h
         print "\n\n##### debugging input embeddings "
         q_outputs = tf.Print(q_outputs, [q_outputs], message="q_outputs", summarize = QUESTION_MAX_LENGTH * HIDDEN_DIM * 3)
         print "\n\n"
-        q_final = tf.Print(q_final, [q_final], message="q_final", summarize = 10)
+        q_final_h = tf.Print(q_final_h, [q_final_h], message="q_final_h", summarize = 10)
 
         # Passage encoder with attention
         p_outputs, _ = self.encode_w_attn(passages, self.seq_length(self.passages_placeholder), q_outputs, scope = "passage_attn")
