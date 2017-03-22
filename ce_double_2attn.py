@@ -149,7 +149,7 @@ class TFModel(Model):
 
     def add_loss_op(self, preds):
         masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
-        masks = tf.Print(masks, [masks], message="masks:", summarize=OUTPUT_MAX_LENGTH)
+        masks = tf.Print(masks, [masks], message="masks:", summarize=TRAIN_BATCH_SIZE * OUTPUT_MAX_LENGTH)
         
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
@@ -160,7 +160,7 @@ class TFModel(Model):
         # masked_loss_mat = tf.multiply(loss_mat, masks)
 
         print "bool masked loss mat ", masked_loss_mat
-        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH * TRAIN_BATCH_SIZE)
 
         # masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
 
