@@ -35,7 +35,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, original_h], self._num_units, True, 1.0))
 				
-		out = tf.Print(out, [out], message = "out vector :", summarize = HIDDEN_DIM * 10)			
+		# out = tf.Print(out, [out], message = "out vector :", summarize = HIDDEN_DIM * 10)			
 					
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
