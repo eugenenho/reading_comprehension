@@ -173,15 +173,19 @@ class TFModel(Model):
 
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
+        # grads = [g * tf.cast(tf.is_nan(g[0]), tf.int32) for g in grads]
 
 # debugging
         
         for g in grad_var_pairs:
             print "gradient type :", type(g[0])
             print "var type :", type(g[1])
-            if tf.is_nan(g[0]): 
-                print "is_nan gradient is : ", g[1]
-                g[1] = tf.Print(g[1], [g[1]], message = "g[1] =")
+            assert_op = tf.Assert(tf.is_nan(g[0]), [g[1]])
+            # if tf.is_nan(g[0]): 
+            #     print "is_nan gradient is : ", g[1]
+            #     g[1] = tf.Print(g[1], [g[1]], message = "g[1] =")
+
+            # g[0] = g[0] * tf.cast(tf.is_nan(g[0]), tf.int32)
 
         clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
         grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
