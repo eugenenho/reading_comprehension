@@ -95,7 +95,11 @@ class Model(object):
             loss = self.run_epoch(sess, merged, data)
             losses.append(loss)
             metrics = self.predict_now(sess, str(epoch))
-            if metrics is None or metrics['rouge_l'] >= self.best_rouge:
+            if metrics is None:
+                self.log.write('\n Can\'t do eval script. Saving...')
+                saver.save(sess, SAVE_MODEL_DIR)
+            elif metrics['rouge_l'] >= self.best_rouge:
+                self.log.write("\n Epoch " + str(epoch) + ", new best ROUGE-L score:" + str(metrics['rouge_l']) + ' saving...')
                 saver.save(sess, SAVE_MODEL_DIR)
 
         # save metrics to a file to graph later
