@@ -120,17 +120,15 @@ class TFModel(Model):
                 mask = self.get_vocab_masks()
                 y_t = tf.multiply(y_t, mask)
                 
-
-                y_t = tf.nn.softmax(y_t)
-
                 if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
+                    inp = tf.nn.softmax(y_t)
+                    inp_index = tf.argmax(inp, 1)
                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
                 else: 
                     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
-
+                
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
 
@@ -150,7 +148,7 @@ class TFModel(Model):
         # print loss_mat
         # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
-#        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
+        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
         # masked_loss_mat = tf.multiply(loss_mat, masks)
 
         # print masked_loss_mat
@@ -161,8 +159,8 @@ class TFModel(Model):
         # print masked_loss_mat
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
-        loss = tf.reduce_sum(loss_mat)
-        #loss = tf.reduce_sum(masked_loss_mat)
+ #       loss = tf.reduce_sum(loss_mat)
+        loss = tf.reduce_sum(masked_loss_mat)
 
         # print loss
         # loss = tf.Print(loss, [loss], message="loss:")
