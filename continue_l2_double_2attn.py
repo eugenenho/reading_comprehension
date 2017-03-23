@@ -27,8 +27,8 @@ def keep_training(model_path = SAVE_MODEL_DIR):
 			session = session
 			saver.restore(session, model_path)
 			print 'Restored model. Predicting....'
-            merged = tf.summary.merge_all()
-            losses = model.fit(session, saver, merged, data)
+			merged = tf.summary.merge_all()
+			losses = model.fit(session, saver, merged, data)
 
 	model.train_writer.close()      
 	model.test_writer.close()
