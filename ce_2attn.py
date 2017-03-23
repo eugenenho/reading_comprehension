@@ -121,16 +121,10 @@ class TFModel(Model):
                 # limit vocab size to words that we have seen in question or passage and popular words
                 # mask = self.get_vocab_masks()
                 # y_t = tf.multiply(y_t, mask)
-                
-                if self.predicting:
-                    inp = tf.nn.softmax(y_t)
-                    inp_index = tf.argmax(inp, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                    inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                    inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
-                
+                inp = tf.nn.softmax(y_t) 
+                inp_index = tf.argmax(inp, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
 
@@ -144,9 +138,10 @@ class TFModel(Model):
 
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
-        
+        preds = tf.Print(preds, [preds], message='Preds:', first_n=-1, summarize=30)
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
+        loss_mat = tf.Print(loss_mat, [loss_mat], message='loss_mat:', first_n=-1, summarize=30)     
         # print loss_mat
         # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
@@ -154,7 +149,7 @@ class TFModel(Model):
         # masked_loss_mat = tf.multiply(loss_mat, masks)
 
         # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
         # masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
 
@@ -165,7 +160,7 @@ class TFModel(Model):
         loss = tf.reduce_mean(masked_loss_mat)
 
         # print loss
-        # loss = tf.Print(loss, [loss], message="loss:")
+        loss = tf.Print(loss, [loss], message="loss:")
 
         return loss
 
@@ -229,10 +224,6 @@ class TFModel(Model):
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_selected_passage_batch()
-            if i % 1200 == 0 and i > 0:
-                self.log.write('\nNow saving file...')
-                saver.save(sess, SAVE_MODEL_DIR)
-                self.log.write('\nSaved...')
             i += 1
         return losses
 
@@ -335,7 +326,6 @@ if __name__ == "__main__":
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
 
-    #model.debug_predictions();
     model.train_writer.close()
     model.test_writer.close()
     model.log.close()
