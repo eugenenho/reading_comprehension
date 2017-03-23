@@ -117,8 +117,8 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
 
                 # limit vocab size to words that we have seen in question or passage and popular words
-                mask = self.get_vocab_masks()
-                y_t = tf.multiply(y_t, mask)
+                # mask = self.get_vocab_masks()
+                # y_t = tf.multiply(y_t, mask)
                 
                 if self.predicting:
                     inp = tf.nn.softmax(y_t)
