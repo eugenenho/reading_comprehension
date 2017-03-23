@@ -232,7 +232,6 @@ class TFModel(Model):
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, None, answers_batch)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
-        self.log.write('\n Validation Loss:' + str(loss))
         self._temp_test_pred_softmax = predictions
         predictions = np.argmax(predictions, axis=2)
         self._temp_test_pred_argmax = predictions
