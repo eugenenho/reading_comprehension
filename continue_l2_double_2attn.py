@@ -12,7 +12,7 @@ from embeddings_handler import EmbeddingHolder
 
 def keep_training(model_path = SAVE_MODEL_DIR):
 	pred_handler = PredictionHandler() 
-	data = DataHolder(data_set)
+	data = DataHolder('train')
 
 	with tf.Graph().as_default():
 		start = time.time()
@@ -27,11 +27,12 @@ def keep_training(model_path = SAVE_MODEL_DIR):
 			session = session
 			saver.restore(session, model_path)
 			print 'Restored model. Predicting....'
-			loss = model.fit(session, saver, data)
+            merged = tf.summary.merge_all()
+            losses = model.fit(session, saver, merged, data)
 
 	model.train_writer.close()      
-    model.test_writer.close()
-    model.log.close()
+	model.test_writer.close()
+	model.log.close()
 	print 'Done continueing'
 
 if __name__ == "__main__":
