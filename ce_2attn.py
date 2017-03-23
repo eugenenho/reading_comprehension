@@ -213,10 +213,6 @@ class TFModel(Model):
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_selected_passage_batch()
-            if i % 1200 == 0 and i > 0:
-                self.log.write('\nNow saving file...')
-                saver.save(sess, SAVE_MODEL_DIR)
-                self.log.write('\nSaved...')
             i += 1
         return losses
 
