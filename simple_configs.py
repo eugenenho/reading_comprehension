@@ -2,7 +2,7 @@ import tensorflow as tf
 
 # DATA PARAMETERS
 NUM_EPOCS = 15
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 DROPOUT = 0.5
 SMALL_DATA_SET = False
 MAX_DATA_SIZE = -1 #-1 to set no limit on data size

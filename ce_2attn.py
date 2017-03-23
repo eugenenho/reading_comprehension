@@ -182,6 +182,7 @@ class TFModel(Model):
 
         grad_norm = tf.global_norm(clipped_grads)
         tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)        
+        
         return optimizer.apply_gradients(grad_var_pairs)
 
     def run_epoch(self, sess, merged, data):
@@ -311,7 +312,7 @@ if __name__ == "__main__":
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
 
-    model.debug_predictions();
+    #model.debug_predictions();
     model.train_writer.close()
     model.test_writer.close()
     model.log.close()
