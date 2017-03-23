@@ -104,6 +104,8 @@ if __name__ == "__main__":
 	predictor.get_ground_truth('./data/train_ground_truth.json')
 	predictor = PredictionHandler('val', OUTPUT_FILE_NAME, True)
 	predictor.get_ground_truth('./data/val_ground_truth.json')
+	predictor = PredictionHandler('dev', OUTPUT_FILE_NAME, True)
+	predictor.get_ground_truth('./data/dev_ground_truth.json')
 	# predictor.get_preds(model = None, session = None, output_file_name = './data/train_preds.json')
 
 
