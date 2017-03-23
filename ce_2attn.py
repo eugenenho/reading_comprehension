@@ -177,11 +177,11 @@ class TFModel(Model):
 
 # debugging
         
-        for g in grad_var_pairs:
-            print "gradient type :", type(g[0])
-            print "var type :", type(g[1])
-            assert_op = tf.Assert(tf.is_nan(g[0]), [g[1]])
-            # if tf.is_nan(g[0]): 
+        # for g in grad_var_pairs:
+        #     print "gradient type :", type(g[0])
+        #     print "var type :", type(g[1])
+        #     assert_op = tf.Assert(tf.is_nan(g[0]), [g[1]])
+        #     # if tf.is_nan(g[0]): 
             #     print "is_nan gradient is : ", g[1]
             #     g[1] = tf.Print(g[1], [g[1]], message = "g[1] =")
 
