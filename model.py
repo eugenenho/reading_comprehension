@@ -71,7 +71,6 @@ class Model(object):
         return tf.sign(mask)
 
 
-
     def predict_now(self, session, identifier):
         preds = self.predict(session, self.val_data)
         output_file_name = './data/' + identifier + '_val_preds.json'
@@ -95,8 +94,13 @@ class Model(object):
             loss = self.run_epoch(sess, merged, data)
             losses.append(loss)
             metrics = self.predict_now(sess, str(epoch))
-            if metrics is None or metrics['rouge_l'] >= self.best_rouge:
+            if metrics is None:
+                self.log.write('\n Can\'t do eval script. Saving...')
                 saver.save(sess, SAVE_MODEL_DIR)
+            elif metrics['rouge_l'] >= self.best_rouge:
+                self.log.write("\n Epoch " + str(epoch) + ", new best ROUGE-L score:" + str(metrics['rouge_l']) + ' saving...')
+                saver.save(sess, SAVE_MODEL_DIR)
+                self.best_rouge = metrics['rouge_l']
 
         # save metrics to a file to graph later
         if len(self.metrics_tracker) > 0:

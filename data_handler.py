@@ -167,6 +167,15 @@ class DataHolder(object):
 
 		self.start_iter += batch_size
 
+		# tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
+		elements_as_ones = np.sign(np.abs(self.a_data[start:end]))
+		seq_length = np.sum(elements_as_ones, axis=1)
+		answer_mask = list()
+		for i in seq_length:
+			curr_mask = [True] * int(i) + [False] * (OUTPUT_MAX_LENGTH - int(i))
+			answer_mask.append(curr_mask)
+		answer_mask = np.array(answer_mask)
+		
 		if SMALL_DATA_SET:
 			return {
 				'question' : self.q_data[:batch_size], 
@@ -182,6 +191,7 @@ class DataHolder(object):
 				'passage' : self.p_data[start:end], 
 				'selected_passage' : self.selected_passage[start:end],
 				'answer' : self.a_data[start:end], 
+				'answer_mask' : answer_mask,
 				'start_token' : self.start_token[:batch_size],
 				'dropout' : DROPOUT if not predicting else 1
 				}
