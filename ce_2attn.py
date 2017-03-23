@@ -179,7 +179,9 @@ class TFModel(Model):
         for g in grad_var_pairs:
             print "gradient type :", type(g[0])
             print "var type :", type(g[1])
-            if np.isnan(g[0]): print "is_nan gradient is : ", g[1]
+            if tf.is_nan(g[0]): 
+                print "is_nan gradient is : ", g[1]
+                g[1] = tf.Print(g[1], [g[1]], message = "g[1] =")
 
         clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
         grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
