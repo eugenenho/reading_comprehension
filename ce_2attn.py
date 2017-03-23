@@ -123,9 +123,8 @@ class TFModel(Model):
                 y_t = tf.multiply(y_t, mask)
                 
 
-                y_t = tf.nn.softmax(y_t)
-
-                inp_index = tf.argmax(y_t, 1)
+                inp = tf.nn.softmax(y_t)
+                inp_index = tf.argmax(inp, 1)
                 inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
 
                 preds.append(y_t)
