@@ -10,7 +10,7 @@ from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
 
 
-def keep_training(model_path = SAVE_MODEL_DIR):
+def keep_training(model_path = SAVE_MODEL_DIR, prev_best_rouge=0):
 	pred_handler = PredictionHandler() 
 	data = DataHolder('train')
 
@@ -28,6 +28,7 @@ def keep_training(model_path = SAVE_MODEL_DIR):
 			saver.restore(session, model_path)
 			print 'Restored model. Predicting....'
 			merged = tf.summary.merge_all()
+			model.best_rouge = prev_best_rouge
 			losses = model.fit(session, saver, merged, data)
 
 	model.train_writer.close()      
