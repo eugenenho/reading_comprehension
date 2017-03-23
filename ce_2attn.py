@@ -18,7 +18,7 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
-FILE_TBOARD_LOG = 'CE model_' + str(ACTIVATION_FUNC) + '_lr:' + LEARNING_RATE + '_hidden:' + HIDDEN_DIM + '_batchsize:'+TRAIN_BATCH_SIZE
+FILE_TBOARD_LOG = 'CE model_' + str(ACTIVATION_FUNC) + '_lr:' + str(LEARNING_RATE) + '_hidden:' + str(HIDDEN_DIM) + '_batchsize:'+ str(TRAIN_BATCH_SIZE)
 
 class TFModel(Model):
 
@@ -145,7 +145,7 @@ class TFModel(Model):
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
         
-       loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
         # print loss_mat
         # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
