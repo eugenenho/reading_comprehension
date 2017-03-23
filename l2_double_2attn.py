@@ -56,7 +56,7 @@ class TFModel(Model):
         
         with tf.variable_scope(scope, reuse):
             attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM)
-            o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
+            o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask, activation=ACTIVATION_FUNC)
         return (o, final_state)
 
     def add_prediction_op(self): 
@@ -66,7 +66,7 @@ class TFModel(Model):
         # Question encoder
         with tf.variable_scope("question"): 
             q_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
-            q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder))
+            q_outputs, q_final_tuple = tf.nn.dynamic_rnn(q_cell, questions, dtype=tf.float32, sequence_length=self.seq_length(self.questions_placeholder), activation=ACTIVATION_FUNC)
             q_final_c, q_final_h = q_final_tuple
             q_final_h = tf.expand_dims(q_final_h, axis=1)
 
@@ -77,7 +77,7 @@ class TFModel(Model):
 
         # Attention state encoder (Match LSTM layer variant)
         with tf.variable_scope("attention"): 
-            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM)
+            a_cell = tf.nn.rnn_cell.LSTMCell(HIDDEN_DIM, activation=ACTIVATION_FUNC)
             a_outputs, a_final_tuple = tf.nn.dynamic_rnn(a_cell, p_outputs, dtype=tf.float32, sequence_length=self.seq_length(self.passages_placeholder))
             a_final_c, a_final_h = a_final_tuple
             a_final_h = tf.expand_dims(a_final_h, axis=1)
@@ -91,7 +91,7 @@ class TFModel(Model):
             d_cell_dim = 3 * HIDDEN_DIM
             
             # Run decoder with attention between DECODER and ATTENTION/Match LSTM layer 
-            d_cell = LSTMAttnCell(d_cell_dim, a_outputs, HIDDEN_DIM)
+            d_cell = LSTMAttnCell(d_cell_dim, a_outputs, HIDDEN_DIM, activation=ACTIVATION_FUNC)
             d_cell_second = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
 
             # Create first-time-step input to LSTM (starter token)
