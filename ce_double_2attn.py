@@ -28,10 +28,11 @@ class TFModel(Model):
         self.questions_placeholder = tf.placeholder(tf.int32, shape=(None, QUESTION_MAX_LENGTH), name="questions")
         self.passages_placeholder = tf.placeholder(tf.int32, shape=(None, PASSAGE_MAX_LENGTH), name="passages")
         self.answers_placeholder = tf.placeholder(tf.int32, shape=(None, OUTPUT_MAX_LENGTH), name="answers")
+        self.mask_placeholder = tf.placeholder(tf.bool, shape=(None, OUTPUT_MAX_LENGTH), name="mask")
         self.start_token_placeholder = tf.placeholder(tf.int32, shape=(None,), name="starter_token")
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, dropout=0.5, answers_batch=None):
+    def create_feed_dict(self, questions_batch, passages_batch, start_token_batch, dropout=0.5, mask_batch=None, answers_batch=None):
         """Creates the feed_dict for the model.
         NOTE: You do not have to do anything here.
         """
@@ -42,6 +43,7 @@ class TFModel(Model):
             self.dropout_placeholder : dropout
         }
         if answers_batch is not None: feed_dict[self.answers_placeholder] = answers_batch
+        if mask_batch is not None: feed_dict[self.mask_placeholder] = mask_batch
         return feed_dict
 
     def add_embedding(self, placeholder):  
@@ -126,18 +128,12 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 
                 # limit vocab size to words that we have seen in question or passage and popular words
-                mask = self.get_vocab_masks()
-                y_t = tf.multiply(y_t, mask)
+                # mask = self.get_vocab_masks()
+                # y_t = tf.multiply(y_t, mask)
                 
-                y_t = tf.nn.softmax(y_t)
-                
-                if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                inp = tf.nn.softmax(y_t)
+                inp_index = tf.argmax(inp, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -148,30 +144,10 @@ class TFModel(Model):
         return preds
 
     def add_loss_op(self, preds):
-        masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
-        
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
-
-        print "loss mat dimensions ", loss_mat
-        loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
-
-        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
-        # masked_loss_mat = tf.multiply(loss_mat, masks)
-
-        print "bool masked loss mat ", masked_loss_mat
-        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
-
-        # masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
-
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
-
+        masked_loss_mat = tf.boolean_mask(loss_mat, self.mask_placeholder)
         loss = tf.reduce_mean(masked_loss_mat)
         tf.summary.scalar('cross_entropy_loss', loss)
-
-        print "loss ", loss
-        loss = tf.Print(loss, [loss], message="loss:")
-
         return loss
 
 
@@ -189,6 +165,15 @@ class TFModel(Model):
         tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)        
         return optimizer.apply_gradients(grad_var_pairs)
 
+    def train_on_batch(self, sess, merged, questions_batch, passages_batch, start_token_batch, dropout, answers_batch, mask_batch):
+        """Perform one step of gradient descent on the provided batch of data."""
+        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, mask_batch, answers_batch=answers_batch)
+        #_, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        summary, _, loss, self.last_preds = sess.run([merged, self.train_op, self.loss, self.pred], feed_dict=feed)
+        self.train_writer.add_summary(summary, self.step)
+        self.step += 1
+        return loss
+
     def run_epoch(self, sess, merged, data):
         prog = Progbar(target=1 + int(data.data_size / TRAIN_BATCH_SIZE), file_given=self.log)
         
@@ -200,10 +185,11 @@ class TFModel(Model):
             p_batch = batch['passage']
             a_batch = batch['answer']
             s_t_batch = batch['start_token']
+            mask_batch = batch['answer_mask']
             dropout = batch['dropout']
             self._temp_test_answer_indices = a_batch
 
-            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch, mask_batch)
             tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 

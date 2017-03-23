@@ -167,6 +167,15 @@ class TFModel(Model):
         tf.summary.scalar(FILE_TBOARD_LOG + 'Loss per Batch', loss)
         return loss
 
+    def train_on_batch(self, sess, merged, questions_batch, passages_batch, start_token_batch, dropout, answers_batch, mask_batch):
+        """Perform one step of gradient descent on the provided batch of data."""
+        feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, mask_batch, answers_batch=answers_batch)
+        #_, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        summary, _, loss, self.last_preds = sess.run([merged, self.train_op, self.loss, self.pred], feed_dict=feed)
+        self.train_writer.add_summary(summary, self.step)
+        self.step += 1
+        return loss
+
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
         tf.summary.scalar(FILE_TBOARD_LOG + 'LEARNING_RATE', loss)
@@ -192,10 +201,13 @@ class TFModel(Model):
             q_batch = batch['question']
             p_batch = batch['passage']
             a_batch = batch['answer']
+            mask_batch = batch['answer_mask']
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
+            self._temp_test_answer_indices = a_batch
 
-            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch, mask_batch)
+            tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
             prog.update(i + 1, [("train loss", loss)])
