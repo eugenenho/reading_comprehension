@@ -71,6 +71,7 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 
 if __name__ == "__main__":
 	# get_preds('val', model_type='l2_2attn', output_file_name='./data/doublecheck_val_preds.json')
+	get_classifier_results('val')
 	get_classifier_results('dev')
 	print 'done'
 
