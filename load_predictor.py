@@ -4,7 +4,7 @@ import numpy as np
 
 import l2_attn
 import l2_2attn
-import l2_2attn_dbl
+import l2_double_2attn
 import ce_attn
 import ce_2attn
 
@@ -25,7 +25,7 @@ def get_preds(data_set, model_type = None, model_path = SAVE_MODEL_DIR, output_f
 
 		if model_type == 'l2_attn': model = l2_attn.TFModel(EmbeddingHolder().get_embeddings_mat(), True)
 		elif model_type == 'l2_2attn': model = l2_2attn.TFModel(EmbeddingHolder().get_embeddings_mat(), True)
-		elif model_type == 'l2_2attn_dbl': model = l2_2attn_dbl.TFModel(EmbeddingHolder().get_embeddings_mat(), True)
+		elif model_type == 'l2_double_2attn': model = l2_double_2attn.TFModel(EmbeddingHolder().get_embeddings_mat(), True)
 		elif model_type == 'ce_attn': model = ce_attn.TFModel(EmbeddingHolder().get_embeddings_mat(), True)
 		elif model_type == 'ce_2attn': model = ce_2attn.TFModel(EmbeddingHolder().get_embeddings_mat(), True)
 		else: return
@@ -70,8 +70,10 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 		print 'Done Predicting'
 
 if __name__ == "__main__":
-	# get_preds('val', model_type='l2_2attn', output_file_name='./data/doublecheck_val_preds.json')
-	get_classifier_results('val')
+	get_preds('val', model_type='l2_double_2attn', output_file_name='./data/doublecheck_val_preds.json')
+	get_preds('dev', model_type='l2_double_2attn', output_file_name='./data/dev_preds.json')
+	# get_classifier_results('val')
+	# get_classifier_results('dev')
 	print 'done'
 
 

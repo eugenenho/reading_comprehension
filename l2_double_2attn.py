@@ -123,18 +123,20 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 
                 # limit vocab size to words that we have seen in question or passage and popular words
-                mask = self.get_vocab_masks()
-                y_t = tf.multiply(y_t, mask)
+                # mask = self.get_vocab_masks()
+                # mask = tf.Print(mask, [mask], message='Mask:', summarize=10)
+                # y_t = tf.multiply(y_t, mask)
+                # y_t = tf.Print(y_t, [y_t], message='Masked y_t:', summarize=60)
                 
                 y_t = tf.nn.softmax(y_t)
                 
-                if self.predicting:
-                    inp_index = tf.argmax(y_t, 1)
-                    inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
-                else: 
-                     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
-                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
-                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
+                # if self.predicting:
+                inp_index = tf.argmax(y_t, 1)
+                inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp_index)
+                # else: 
+                #      inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
+                #      inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
+                #      inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
@@ -199,10 +201,6 @@ class TFModel(Model):
             prog.update(i + 1, [("train loss", loss)])
 
             batch = data.get_selected_passage_batch()
-            if i % 1200 == 0 and i > 0:
-                self.log.write('\nNow saving file...')
-                saver.save(sess, SAVE_MODEL_DIR)
-                self.log.write('\nSaved...')
             i += 1
         return losses
 
@@ -234,7 +232,7 @@ class TFModel(Model):
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
-        predictions, loss = sess.run([self.pred, self.loss], feed_dict=feed)
+        predictions = sess.run(self.pred, feed_dict=feed)
         predictions = np.argmax(predictions, axis=2)
         return predictions
 

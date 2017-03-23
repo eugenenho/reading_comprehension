@@ -58,7 +58,7 @@ class Model(object):
     # masks to limit number of words decoder needs to choose from at any given time
     def get_vocab_masks(self):
         popular_words = tf.constant([1 for _ in range(NUM_POPULAR_WORDS)] + [0 for _ in range(VOCAB_SIZE - NUM_POPULAR_WORDS)], dtype=tf.float32)
-        mask = tf.zeros((tf.shape(self.questions_placeholder)[0], VOCAB_SIZE)) + popular_words
+        mask = tf.zeros((tf.shape(self.questions_placeholder)[0], VOCAB_SIZE))# + popular_words
 
         q_one_hot = tf.one_hot(self.questions_placeholder, VOCAB_SIZE)
         questions_mask = tf.reduce_sum(q_one_hot, axis = 1)
@@ -69,7 +69,6 @@ class Model(object):
         mask += passages_mask
 
         return tf.sign(mask)
-
 
 
     def predict_now(self, session, identifier):
@@ -95,8 +94,13 @@ class Model(object):
             loss = self.run_epoch(sess, merged, data)
             losses.append(loss)
             metrics = self.predict_now(sess, str(epoch))
-            if metrics is None or metrics['rouge_l'] >= self.best_rouge:
+            if metrics is None:
+                self.log.write('\n Can\'t do eval script. Saving...')
                 saver.save(sess, SAVE_MODEL_DIR)
+            elif metrics['rouge_l'] >= self.best_rouge:
+                self.log.write("\n Epoch " + str(epoch) + ", new best ROUGE-L score:" + str(metrics['rouge_l']) + ' saving...')
+                saver.save(sess, SAVE_MODEL_DIR)
+                self.best_rouge = metrics['rouge_l']
 
         # save metrics to a file to graph later
         if len(self.metrics_tracker) > 0:

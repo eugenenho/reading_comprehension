@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 # DATA PARAMETERS
-NUM_EPOCS = 15
+NUM_EPOCS = 10
 LEARNING_RATE = 0.001
 DROPOUT = 0.5
 SMALL_DATA_SET = False
