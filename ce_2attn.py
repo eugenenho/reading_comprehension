@@ -160,26 +160,30 @@ class TFModel(Model):
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
  #       loss = tf.reduce_sum(loss_mat)
-        loss = tf.reduce_sum(masked_loss_mat)
+        loss = tf.reduce_mean(masked_loss_mat)
 
         # print loss
         # loss = tf.Print(loss, [loss], message="loss:")
 
         return loss
 
-
     def add_training_op(self, loss):        
         optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'LOSS', loss)
+        tf.summary.scalar(FILE_TBOARD_LOG + '_LOSS', loss)
 
         grad_var_pairs = optimizer.compute_gradients(loss)
         grads = [g[0] for g in grad_var_pairs]
-        
+
+# debugging
+        for g in grad_var_pairs:
+            if np.isnan(g[0]): print "is_nan gradient is : ", g[1]
+
         clipped_grads, _ = tf.clip_by_global_norm(grads, MAX_GRAD_NORM)
         grad_var_pairs = [(g, grad_var_pairs[i][1]) for i, g in enumerate(clipped_grads)]
 
+        
         grad_norm = tf.global_norm(clipped_grads)
-        tf.summary.scalar(FILE_TBOARD_LOG + 'Global Gradient Norm', grad_norm)        
+        tf.summary.scalar(FILE_TBOARD_LOG + '_Global Gradient Norm', grad_norm)        
         
         return optimizer.apply_gradients(grad_var_pairs)
 
