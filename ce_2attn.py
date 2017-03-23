@@ -132,7 +132,6 @@ class TFModel(Model):
                     inp = tf.slice(self.answers_placeholder, [0, time_step], [-1, 1]) 
                     inp = tf.nn.embedding_lookup(self.pretrained_embeddings, inp)
                     inp = tf.reshape(inp, [-1, EMBEDDING_DIM])
-                inp = tf.Print(inp, [inp], message="inp", first_n=-1, summarize=30)
 
                 preds.append(y_t)
                 tf.get_variable_scope().reuse_variables()
