@@ -101,6 +101,7 @@ class Model(object):
             elif metrics['rouge_l'] >= self.best_rouge:
                 self.log.write("\n Epoch " + str(epoch) + ", new best ROUGE-L score:" + str(metrics['rouge_l']) + ' saving...')
                 saver.save(sess, SAVE_MODEL_DIR)
+                self.best_rouge = metrics['rouge_l']
 
         # save metrics to a file to graph later
         if len(self.metrics_tracker) > 0:
