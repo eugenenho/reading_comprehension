@@ -123,8 +123,8 @@ class TFModel(Model):
                 y_t = tf.matmul(o_drop_t, U) + b # SHAPE: [BATCH, VOCAB_SIZE]
                 
                 # limit vocab size to words that we have seen in question or passage and popular words
-                mask = self.get_vocab_masks()
-                y_t = tf.multiply(y_t, mask)
+                # mask = self.get_vocab_masks()
+                # y_t = tf.multiply(y_t, mask)
                 
                 y_t = tf.nn.softmax(y_t)
                 
@@ -234,7 +234,7 @@ class TFModel(Model):
 
     def predict_on_batch(self, sess, questions_batch, passages_batch, start_token_batch, dropout, answers_batch):
         feed = self.create_feed_dict(questions_batch, passages_batch, start_token_batch, dropout, answers_batch)
-        predictions, loss = sess.run([self.pred, self.loss], feed_dict=feed)
+        predictions = sess.run(self.pred, feed_dict=feed)
         predictions = np.argmax(predictions, axis=2)
         return predictions
 
