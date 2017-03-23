@@ -1,0 +1,27 @@
+Learning more about the Vocabulary
+Word 7 "the" occurs 2,587,924
+word 25 "on" occurs 293,123
+Word 50 "one" occurs 108,297
+Word 100 "For" occurs 46,160
+Word 500 "base" occurs 11,070
+Word 1k "Add" occurs 6,108
+Word 2.5k "electron" occurs 2,341
+Word 5k "vegetation" occurs 987
+Word 10k "musician" occurs 426
+Word 15k "Dean" occurs 225
+Word 20k "Harper" occurs 107
+Word 25k "physician’s" occurs 94
+Word 30k "metrical" occurs 70
+Word 35k "physiologist" occurs 65
+Word 40k "432" occurs 56
+Word 45k "genocide" occurs 36
+Word 50k "SMOOTH" occurs 30
+Word 60k "Approaches" occurs 23
+Word 70k "RELATIONS" occurs 18
+Word 80k "Chubby" occurs 12
+Word 90k "Chittenden" occurs 12
+Word 100k "Havering" occurs 10
+Word 200k "MCCMH" occurs 3
+Word 300k "bradycardias" occurs 3
+Word 400k "Pariya-muwas" occurs 1
+graph to vocab size of 646743
