@@ -18,7 +18,7 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
-FILE_TBOARD_LOG = 'CE model - relu'
+FILE_TBOARD_LOG = 'CE model_' + str(ACTIVATION_FUNC) + '_lr:' + LEARNING_RATE + '_hidden:' + HIDDEN_DIM + '_batchsize:'+TRAIN_BATCH_SIZE
 
 class TFModel(Model):
 
@@ -140,17 +140,17 @@ class TFModel(Model):
 
     def add_loss_op(self, preds):
         # masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
-        masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
+ #       masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
 
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
         
-        loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
+       loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
         # print loss_mat
         # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
-        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
+#        masked_loss_mat = tf.boolean_mask(loss_mat, masks)
         # masked_loss_mat = tf.multiply(loss_mat, masks)
 
         # print masked_loss_mat
@@ -161,8 +161,8 @@ class TFModel(Model):
         # print masked_loss_mat
         # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
-        loss = tf.reduce_sum(masked_loss_mat)
-        tf.summary.scalar('cross_entropy_loss', loss)
+        loss = tf.reduce_sum(loss_mat)
+        #loss = tf.reduce_sum(masked_loss_mat)
 
         # print loss
         # loss = tf.Print(loss, [loss], message="loss:")

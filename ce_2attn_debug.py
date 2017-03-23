@@ -19,7 +19,7 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
-FILE_TBOARD_LOG = 'CE model - relu'
+FILE_TBOARD_LOG = 'CE model_' + str(ACTIVATION_FUNC) + '_lr:' + LEARNING_RATE + '_hidden:' + HIDDEN_DIM + '_batchsize:'+TRAIN_BATCH_SIZE
 
 class TFModel(Model):
 
@@ -199,7 +199,9 @@ class TFModel(Model):
 
     def add_loss_op(self, preds):
         # masks = tf.cast( tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH), tf.float32)
-        masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
+        
+        with tf.variable_scope("loss<shouldnt_see_this>"):
+            masks = tf.sequence_mask(self.seq_length(self.answers_placeholder), OUTPUT_MAX_LENGTH)
 
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
@@ -211,20 +213,16 @@ class TFModel(Model):
 
         masked_loss_mat = tf.boolean_mask(loss_mat, masks)
         # masked_loss_mat = tf.multiply(loss_mat, masks)
-
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
-
         # masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
 
-        # print masked_loss_mat
-        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
+        print "masked_loss_mat :", masked_loss_mat
+        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="reduced masked_loss_mat:", summarize=TRAIN_BATCH_SIZE)
 
-        loss = tf.reduce_mean(masked_loss_mat)
+        loss = tf.reduce_sum(masked_loss_mat)
         tf.summary.scalar('cross_entropy_loss', loss)
 
-        # print loss
-        # loss = tf.Print(loss, [loss], message="loss:")
+        print "loss :", loss
+        loss = tf.Print(loss, [loss], message="loss:")
 
         return loss
 
