@@ -71,7 +71,6 @@ class Model(object):
         return tf.sign(mask)
 
 
-
     def predict_now(self, session, identifier):
         preds = self.predict(session, self.val_data)
         output_file_name = './data/' + identifier + '_val_preds.json'
