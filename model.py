@@ -58,7 +58,7 @@ class Model(object):
     # masks to limit number of words decoder needs to choose from at any given time
     def get_vocab_masks(self):
         popular_words = tf.constant([1 for _ in range(NUM_POPULAR_WORDS)] + [0 for _ in range(VOCAB_SIZE - NUM_POPULAR_WORDS)], dtype=tf.float32)
-        mask = tf.zeros((tf.shape(self.questions_placeholder)[0], VOCAB_SIZE))# + popular_words
+        mask = tf.zeros((tf.shape(self.questions_placeholder)[0], VOCAB_SIZE)) + popular_words
 
         q_one_hot = tf.one_hot(self.questions_placeholder, VOCAB_SIZE)
         questions_mask = tf.reduce_sum(q_one_hot, axis = 1)
