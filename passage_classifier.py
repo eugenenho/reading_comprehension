@@ -152,6 +152,7 @@ class PassClassifier(Model):
 			acc = self.predict_now(sess, str(epoch))
 			if acc >= self.best_accuracy:
 				saver.save(sess, SAVE_MODEL_DIR)
+				self.best_accuracy = acc
 		return losses
 
 	def predict_now(self, session, identifier):

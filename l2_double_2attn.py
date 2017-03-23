@@ -124,7 +124,9 @@ class TFModel(Model):
                 
                 # limit vocab size to words that we have seen in question or passage and popular words
                 # mask = self.get_vocab_masks()
+                # mask = tf.Print(mask, [mask], message='Mask:', summarize=10)
                 # y_t = tf.multiply(y_t, mask)
+                # y_t = tf.Print(y_t, [y_t], message='Masked y_t:', summarize=60)
                 
                 y_t = tf.nn.softmax(y_t)
                 
