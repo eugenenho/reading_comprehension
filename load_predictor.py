@@ -67,7 +67,7 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 			preds = np.asarray(list_preds)
 			y = data.get_full_selected()
 			f = open('classifier_check_log', 'w')
-			f.write("File to check results of classifier:\n Preds     Y")
+			f.write("File to check results of classifier:\n Preds     Y\n")
 			for p_val, y_val in zip(preds, y):
 				f.write(str(p_val) + '        ' + str(y_val))
 				f.write('\n')
