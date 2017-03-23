@@ -1,12 +1,12 @@
 import tensorflow as tf
 
 # DATA PARAMETERS
-NUM_EPOCS = 10
+NUM_EPOCS = 2
 LEARNING_RATE = 0.001
 DROPOUT = 0.5
 SMALL_DATA_SET = False
-MAX_DATA_SIZE = -1 #-1 to set no limit on data size
-TRAIN_BATCH_SIZE = 128
+MAX_DATA_SIZE = 24 #-1 to set no limit on data size
+TRAIN_BATCH_SIZE = 2
 MAX_GRAD_NORM = 40
 
 # Text params
@@ -22,7 +22,7 @@ EMBEDDING_DIM = 300
 
 # model params
 HIDDEN_DIM = 300
-ACTIVATION_FUNC = tf.nn.relu
+ACTIVATION_FUNC = tf.nn.tanh
 
 # directories
 GLOVE_DIR = './download/dwr/'

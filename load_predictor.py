@@ -66,14 +66,19 @@ def get_classifier_results(data_set, model_path = SAVE_MODEL_DIR):
 					list_preds.append(row)
 			preds = np.asarray(list_preds)
 			y = data.get_full_selected()
+			f = open('classifier_check_log', 'w')
+			f.write("File to check results of classifier:\n Preds     Y")
+			for p_val, y_val in zip(preds, y):
+				f.write(str(p_val) + '        ' + str(y_val))
+				f.write('\n')
 			classifier_eval(preds, y)
 		print 'Done Predicting'
 
 if __name__ == "__main__":
-	get_preds('val', model_type='l2_double_2attn', output_file_name='./data/doublecheck_val_preds.json')
-	get_preds('dev', model_type='l2_double_2attn', output_file_name='./data/dev_preds.json')
+	# get_preds('val', model_type='l2_double_2attn', output_file_name='./data/doublecheck_val_preds.json')
+	# get_preds('dev', model_type='l2_double_2attn', output_file_name='./data/dev_preds.json')
 	# get_classifier_results('val')
-	# get_classifier_results('dev')
+	get_classifier_results('dev')
 	print 'done'
 
 
