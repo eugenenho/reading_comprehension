@@ -61,7 +61,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 ##################			
 
 				factor_matrix = 1 / factor_matrix # turn into actual multiplication factor
-
+				factor_matrix = mask * factor_matrix
 
 ##### DEBUG ######
 				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
