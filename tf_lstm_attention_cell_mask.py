@@ -38,7 +38,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 
 				# get mask matrix before softmax process
-				mask = tf.sign(tf.abs(tf.constant(scores))) # [None x max_time x 1] same shape, but 0 for all 0, 1 for all non zero values
+				mask = tf.sign(tf.abs(tf.identity(scores))) # [None x max_time x 1] same shape, but 0 for all 0, 1 for all non zero values
 
 
 ##### DEBUG ######
@@ -49,7 +49,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				scores = tf.exp(scores - tf.reduce_max(scores, reduction_indices=1, keep_dims=True))
 				scores = scores / (1e-6 + tf.reduce_sum(scores, reduction_indices=1, keep_dims=True))
 
-				factor_matrix = tf.constant(tf.constant(scores) * mask) # [None x max_time x 1] same shape, but masking out all values that were initially 0
+				factor_matrix = tf.identity(scores) * mask # [None x max_time x 1] same shape, but masking out all values that were initially 0
 
 ##### DEBUG ######
 #				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after scores * mask:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
