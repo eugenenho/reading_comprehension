@@ -30,6 +30,11 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				
 				# self.hs = [None x max_time x H]       
 				scores = tf.reduce_sum(self.hs * h_t, reduction_indices = 2, keep_dims = True) # [None x max_time x 1]
+
+##### DEBUG ######
+				scores = tf.Print(scores, [scores], message = "scores vector pre-processing :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+
+
 				scores = tf.exp(scores - tf.reduce_max(scores, reduction_indices=1, keep_dims=True))
 				scores = scores / (1e-6 + tf.reduce_sum(scores, reduction_indices=1, keep_dims=True))
 
