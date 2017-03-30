@@ -8,7 +8,7 @@ from progbar import Progbar
 from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
-from tf_lstm_attention_cell_mask import LSTMAttnCell
+from tf_lstm_attention_cell_mask2 import LSTMAttnCell
 
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
@@ -61,7 +61,7 @@ class TFModel(Model):
     def encode_w_attn(self, inputs, mask, prev_states, scope="", reuse=False):
         
         with tf.variable_scope(scope, reuse):
-            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, activation=ACTIVATION_FUNC)
+            attn_cell = LSTMAttnCell(HIDDEN_DIM, prev_states, HIDDEN_DIM, mask, activation=ACTIVATION_FUNC)
             o, final_state = tf.nn.dynamic_rnn(attn_cell, inputs, dtype=tf.float32, sequence_length=mask)
         return (o, final_state)
 
@@ -97,7 +97,7 @@ class TFModel(Model):
             d_cell_dim = 3 * HIDDEN_DIM
             
             # Run decoder with attention between DECODER and PASSAGE with ATTENTION (bet passage and question)
-            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM, activation=ACTIVATION_FUNC)
+            d_cell = LSTMAttnCell(d_cell_dim, p_outputs, HIDDEN_DIM, self.seq_length(self.passages_placeholder), activation=ACTIVATION_FUNC)
             # d_cell = tf.nn.rnn_cell.LSTMCell(d_cell_dim) # Make decoder cell with hidden dim
  
             # Create first-time-step input to LSTM (starter token)
@@ -327,11 +327,7 @@ if __name__ == "__main__":
             model.log.write('\nran init, fitting.....')
             losses = model.fit(session, saver, merged, data)
 
-<<<<<<< HEAD
-    #model.debug_predictions();
-=======
     # model.debug_predictions();
->>>>>>> 365c5a80bcda97079e5f0dda313864af6f044c6b
     model.train_writer.close()
     model.test_writer.close()
     model.log.close()
