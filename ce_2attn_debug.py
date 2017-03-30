@@ -19,7 +19,7 @@ END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
 
-FILE_TBOARD_LOG = 'CE model_' + str(ACTIVATION_FUNC) + '_lr:' + LEARNING_RATE + '_hidden:' + HIDDEN_DIM + '_batchsize:'+TRAIN_BATCH_SIZE
+FILE_TBOARD_LOG = 'CE model_' + str(ACTIVATION_FUNC) + '_lr:' + str(LEARNING_RATE) + '_hidden:' + str(HIDDEN_DIM) + '_batchsize:'+ str(TRAIN_BATCH_SIZE)
 
 class TFModel(Model):
 
