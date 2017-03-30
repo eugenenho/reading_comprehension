@@ -16,7 +16,8 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		original_c, original_h = lstm_tuple
 
 ##### DEBUG ######
-		original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = self._num_units * TRAIN_BATCH_SIZE)
+#		original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = self._num_units * TRAIN_BATCH_SIZE)
+##################
 		
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
@@ -81,7 +82,8 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, original_h], self._num_units, True, 1.0))
 				
 ##### DEBUG ######
-		out = tf.Print(out, [out], message = "out vector :", summarize = self._num_units * TRAIN_BATCH_SIZE)			
-					
+#		out = tf.Print(out, [out], message = "out vector :", summarize = self._num_units * TRAIN_BATCH_SIZE)			
+##################		
+
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
