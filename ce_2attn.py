@@ -8,7 +8,7 @@ from progbar import Progbar
 from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
 from embeddings_handler import EmbeddingHolder
-from tf_lstm_attention_cell import LSTMAttnCell
+from tf_lstm_attention_cell_mask import LSTMAttnCell
 
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
@@ -217,15 +217,6 @@ class TFModel(Model):
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
             self._temp_test_answer_indices = a_batch
-
-  #### DEBUG
-            print "question: "
-            print q_batch
-            
-            print "passage: "
-            print p_batch
-
-
 
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch, mask_batch)
             tf.summary.scalar('Loss per Batch', loss)
