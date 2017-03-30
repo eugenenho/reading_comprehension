@@ -14,7 +14,9 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 		lstm_out, lstm_tuple = super(LSTMAttnCell, self).__call__(inputs, state, scope)
 
 		original_c, original_h = lstm_tuple
-		# original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = 16 * 5)
+
+##### DEBUG ######
+		original_h = tf.Print(original_h, [original_h], message = "original_h vector :", summarize = self._num_units * TRAIN_BATCH_SIZE)
 		
 		with tf.variable_scope(scope or type(self).__name__):
 			with tf.variable_scope("Attn"):  # reuse = True???
@@ -30,12 +32,18 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				scores = tf.reduce_sum(self.hs * h_t, reduction_indices = 2, keep_dims = True) # [None x max_time x 1]
 				scores = tf.exp(scores - tf.reduce_max(scores, reduction_indices=1, keep_dims=True))
 				scores = scores / (1e-6 + tf.reduce_sum(scores, reduction_indices=1, keep_dims=True))
+
+##### DEBUG ######
+				scores = tf.Print(scores, [scores], message = "scores vector :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+
+
 				context = tf.reduce_sum(self.hs * scores, reduction_indices = 1) # [None x H]
 
 				with tf.variable_scope("AttnConcat"):
 					out = tf.nn.relu(tf.nn.rnn_cell._linear([context, original_h], self._num_units, True, 1.0))
 				
-		# out = tf.Print(out, [out], message = "out vector :", summarize = HIDDEN_DIM * 10)			
+##### DEBUG ######
+		out = tf.Print(out, [out], message = "out vector :", summarize = self._num_units * TRAIN_BATCH_SIZE)			
 					
 		output_tuple = tf.nn.rnn_cell.LSTMStateTuple(original_c, out)
 		return (out, output_tuple)
