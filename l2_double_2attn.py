@@ -7,7 +7,7 @@ from progbar import Progbar
 
 from embeddings_handler import EmbeddingHolder
 from data_handler import DataHolder
-from tf_lstm_attention_cell import LSTMAttnCell
+from tf_lstm_attention_cell_mask import LSTMAttnCell
 
 
 from simple_configs import LOG_FILE_DIR, SAVE_MODEL_DIR, NUM_EPOCS, TRAIN_BATCH_SIZE, EMBEDDING_DIM, QUESTION_MAX_LENGTH, PASSAGE_MAX_LENGTH, OUTPUT_MAX_LENGTH, VOCAB_SIZE, LEARNING_RATE, HIDDEN_DIM, MAX_GRAD_NORM, ACTIVATION_FUNC 
@@ -16,7 +16,8 @@ STR_ID = 1
 END_ID = 2
 SOS_ID = 3
 UNK_ID = 4
-FILE_TBOARD_LOG = 'L2 2attn dbl '
+
+FILE_TBOARD_LOG = 'L2 model_' + str(ACTIVATION_FUNC) + '_lr:' + str(LEARNING_RATE) + '_hidden:' + str(HIDDEN_DIM) + '_batchsize:'+ str(TRAIN_BATCH_SIZE)
 
 class TFModel(Model):
     def add_placeholders(self):

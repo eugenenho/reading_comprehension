@@ -32,7 +32,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				scores = tf.reduce_sum(self.hs * h_t, reduction_indices = 2, keep_dims = True) # [None x max_time x 1]
 
 ##### DEBUG ######
-				scores = tf.Print(scores, [scores], message = "scores vector pre-processing :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+#				scores = tf.Print(scores, [scores], message = "scores vector pre-processing :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
 ##################
 
 
@@ -41,7 +41,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 
 ##### DEBUG ######
-				mask = tf.Print(mask, [mask], message = "mask vector pre-processing :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+#				mask = tf.Print(mask, [mask], message = "mask vector pre-processing :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
 ##################
 
 
@@ -51,20 +51,20 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				factor_matrix = scores * mask # [None x max_time x 1] same shape, but masking out all values that were initially 0
 
 ##### DEBUG ######
-				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after scores * mask:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+#				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after scores * mask:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
 ##################			
 
 				factor_matrix = tf.reduce_sum(factor_matrix, reduction_indices = 1, keep_dims=True)
 
 ##### DEBUG ######
-				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after reduce_sum:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+#				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after reduce_sum:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
 ##################			
 
 				factor_matrix = 1 / factor_matrix # turn into actual multiplication factor
 				factor_matrix = mask * factor_matrix
 
 ##### DEBUG ######
-				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+#				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
 ##################
 
 
@@ -72,7 +72,7 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 
 
 ##### DEBUG ######
-				scores = tf.Print(scores, [scores], message = "scores vector :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+#				scores = tf.Print(scores, [scores], message = "scores vector :", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
 ##################
 
 				context = tf.reduce_sum(self.hs * scores, reduction_indices = 1) # [None x H]
