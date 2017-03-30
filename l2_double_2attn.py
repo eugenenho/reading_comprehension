@@ -192,12 +192,13 @@ class TFModel(Model):
             q_batch = batch['question']
             p_batch = batch['passage']
             a_batch = batch['answer']
-            mask_batch = batch['answer_mask']
+            #mask_batch = batch['answer_mask']
             s_t_batch = batch['start_token']
             dropout = batch['dropout']
             self._temp_test_answer_indices = a_batch
 
-            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch, mask_batch)
+            loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch)
+            #loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch, mask_batch)
             tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
 
