@@ -182,6 +182,7 @@ class DataHolder(object):
 				'passage' : self.p_data[:batch_size], 
 				'selected_passage' : self.selected_passage[:batch_size],
 				'answer' : self.a_data[:batch_size], 
+				'answer_mask' : answer_mask,
 				'start_token' : self.start_token[:batch_size],
 				'dropout' : 1
 				}
