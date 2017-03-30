@@ -49,7 +49,17 @@ class LSTMAttnCell(tf.nn.rnn_cell.LSTMCell):
 				scores = scores / (1e-6 + tf.reduce_sum(scores, reduction_indices=1, keep_dims=True))
 
 				factor_matrix = scores * mask # [None x max_time x 1] same shape, but masking out all values that were initially 0
+
+##### DEBUG ######
+				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after scores * mask:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+##################			
+
 				factor_matrix = tf.reduce_sum(factor_matrix, reduction_indices = 1, keep_dims=True)
+
+##### DEBUG ######
+				factor_matrix = tf.Print(factor_matrix, [factor_matrix], message = "factor_matrix vector: after reduce_sum:", summarize = TRAIN_BATCH_SIZE * PASSAGE_MAX_LENGTH)			
+##################			
+
 				factor_matrix = 1 / factor_matrix # turn into actual multiplication factor
 
 
