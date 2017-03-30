@@ -218,6 +218,15 @@ class TFModel(Model):
             dropout = batch['dropout']
             self._temp_test_answer_indices = a_batch
 
+  #### DEBUG
+            print "question: "
+            print q_batch
+            
+            print "passage: "
+            print p_batch
+
+
+
             loss = self.train_on_batch(sess, merged, q_batch, p_batch, s_t_batch, dropout, a_batch, mask_batch)
             tf.summary.scalar('Loss per Batch', loss)
             losses.append(loss)
