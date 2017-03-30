@@ -139,10 +139,10 @@ class TFModel(Model):
 
         # print masks
         # masks = tf.Print(masks, [masks], message="Masks:", summarize=OUTPUT_MAX_LENGTH)
-        preds = tf.Print(preds, [preds], message='Preds:', first_n=-1, summarize=30)
+        # preds = tf.Print(preds, [preds], message='Preds:', first_n=-1, summarize=30)
         loss_mat = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.answers_placeholder)
 
-        loss_mat = tf.Print(loss_mat, [loss_mat], message='loss_mat:', first_n=-1, summarize=30)     
+        # loss_mat = tf.Print(loss_mat, [loss_mat], message='loss_mat:', first_n=-1, summarize=30)     
         # print loss_mat
         # loss_mat = tf.Print(loss_mat, [loss_mat], message="loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
@@ -150,7 +150,7 @@ class TFModel(Model):
         # masked_loss_mat = tf.multiply(loss_mat, masks)
 
         # print masked_loss_mat
-        masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
+        # masked_loss_mat = tf.Print(masked_loss_mat, [masked_loss_mat], message="masked_loss_mat:", summarize=OUTPUT_MAX_LENGTH)
 
         # masked_loss_mat = tf.reduce_sum(masked_loss_mat, axis=1)
 
@@ -161,7 +161,7 @@ class TFModel(Model):
         loss = tf.reduce_mean(masked_loss_mat)
 
         # print loss
-        loss = tf.Print(loss, [loss], message="loss:")
+        # loss = tf.Print(loss, [loss], message="loss:")
 
         return loss
 
